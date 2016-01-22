@@ -1,0 +1,171 @@
+//
+// This is the main program on the BBB
+// It launches the motor_control code on PRU 0
+// It also launches the wheel encoder / sample period code on PRU 1
+//
+
+#include <stdio.h>
+#include <stdlib.h>
+#include "prussdrv.h"
+#include "pruss_intc_mapping.h"
+#include "mio.h"
+#include "ROBOTlib.h"
+#include <assert.h>
+#include "child.h"
+
+// ON and OFF
+
+#define		ON  	1
+#define		OFF		0
+
+// PRU 0 is running C-code for PID control
+// PRU 1 is looking at wheel encoders and setting sample period
+
+#define     PRU0	0
+#define     PRU1    1 
+
+// Pointer to pru 0 and pru 1 data memories
+
+static void *pru0DataMemory;
+static unsigned int *pru0DataMemory_int;
+
+static void *pru0DataMemory;
+static unsigned int *pru0DataMemory_int;
+
+// ********************************
+// Initialization routine
+// ********************************
+
+void PRUinit(void) {
+// Initialize structure used by prussdrv_pruintc_intc   
+// PRUSS_INTC_INITDATA is found in pruss_intc_mapping.h 
+
+   tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
+
+/* Allocate and initialize memory */
+
+   prussdrv_init ();
+
+// For PRU 0
+
+   prussdrv_open (PRU_EVTOUT_0);
+
+// For PRU 1
+
+   prussdrv_open (PRU_EVTOUT_1);
+
+// Map PRU's INTC 
+
+   prussdrv_pruintc_init(&pruss_intc_initdata);
+
+// Load and execute binary on PRU0 
+// Since using C-code for PRU, we need to give START_ADDR 
+
+  	prussdrv_exec_program_at(PRU0, "./text.bin", START_ADDR);
+
+/* Load and execute binary on PRU1 */
+
+   	prussdrv_exec_program(PRU1, "./pru1.bin");   
+
+/* Wait for event completion from PRU 1 */
+	
+	return ;
+}
+
+// ****************************
+// Routine to clean up 
+// ****************************
+
+void PRUcleanup(void) {
+
+/* Disable PRU and close memory mappings */
+
+	printf("Disabling the PRUs and exiting\n") ;
+
+   	prussdrv_pru_disable(PRU0);
+   	prussdrv_pru_disable(PRU1);
+
+   	prussdrv_exit ();
+
+	return ;
+}
+
+// **********************************
+// Main program
+// **********************************
+
+void main (void) {  
+ 	
+	FILE 	*read_from, *write_to;
+   	int 	childpid ;
+	char	str[80] ;
+
+   	int n;
+
+	if (getuid() != 0) {
+		printf("You must run this program as root. Exiting.\n") ;
+		exit(EXIT_FAILURE) ;
+	}
+
+	printf("Running testMotor.c code (Aug 11, 2015) ....\n") ;
+
+// Perform some initialization
+// Calls a bunch of routines from PRU API
+// Loads and executes programs in PRU 0 and PRU 1
+
+	PRUinit() ;
+
+/*
+   prussdrv_map_prumem(PRUSS0_PRU0_DATARAM, &pru0DataMemory);
+   pru0DataMemory_int = (unsigned int *) pru0DataMemory;
+   unsigned int sampletimestep = 1;  //delay factor
+   *(pru0DataMemory_int) = sampletimestep;
+   unsigned int numbersamples = 1000;  //number of samples
+   *(pru0DataMemory_int+1) = numbersamples;
+   // copy the waveform data into PRU memory
+   for (i=0; i<numbersamples; i++){
+      *(pru0DataMemory_int+2+i) = waveform[i];
+*/
+
+	printf("Waiting for PRU 1 to complete.\n") ;
+   	n = prussdrv_pru_wait_event (PRU_EVTOUT_1);  
+	printf("PRU program completed, event number %d.\n", n);
+
+	PRUcleanup() ;
+
+// Here is how we can spawn a child process
+
+   	childpid = start_child("tclsh", &read_from, &write_to);
+
+/* Tell tclsh to source the tcl script */
+/* Anything sent to us from tcl script should be printed to screen */
+
+  	fprintf(write_to, "set a 2 ; set b 3; puts [expr $a + $b] \n") ;
+  	if (fgets(str, 80, read_from) > 0)  printf("%s\n", str) ;
+}
+
+
+// Send a message to PSoC 
+
+//    PSOCprint("Hello world.\n") ;
+
+// Test the sonar module
+
+//    test_sonar() ;
+
+// Go out for a test drive
+
+//    test_drive() ;
+
+// Test the servo
+
+//	test_servo() ;
+
+//  Turn LED off on PSOC board
+//  Then turn on on for 5 seconds
+
+//   	turnLED(OFF) ;
+//	turnLED(ON) ;
+// 	pauseSec(5) ;
+//	turnLED(OFF) ;
+

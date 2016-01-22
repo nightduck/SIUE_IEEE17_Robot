@@ -1,0 +1,5 @@
+#!/bin/sh
+
+$PASM -V2 -I/root/pru_sdk/include -b pru1.p
+#/usr/bin/pasm -V2 -I/root/pru_sdk/include -b pru1.p
+
