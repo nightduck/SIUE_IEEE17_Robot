@@ -5,6 +5,11 @@
 * ISBN 9781118935125. Please see the file README.md in the repository root 
 * directory for copyright and GNU GPLv3 license information.
 */
+
+/* DTO for the Beaglebone black PID motor board Rev-A
+ * Ver - 1.0
+ * Clayton Faber - 2016
+ */
 /dts-v1/;
 /plugin/;
 
@@ -31,19 +36,12 @@
 	    "P8.41",			    // PRU1 r31.t4  (ENC-M3)		//
 	    "P8.43",			    // PRU1 r31.t2  (ENC-M4)		// Fix this in revB
 	    "P8.45",			    // PRU1 r30.t0  (LED)
-	    "P8.15",			    // PRU0 r31.t15 (KILL_SW) 
+	    "P8.15",			    // PRU0 r31.t15 (KILL_SW) 		//probably set this to p8_20 because I have to disable the emmc2 anyways
 	    "P8.11",			    // PRU0 r30.t15 (PS2 CLK) 
 	    "P8.12",			    // PRU0 r30.t14 (PS2 DAT) 
-            "pru0"
+            "pru0",
 	    "pru1"
  
-
-            
-            
-	    
-   
-
-
 
    fragment@0 {
       target = <&am33xx_pinmux>;
@@ -56,18 +54,26 @@
             >;
          };
 
-         pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
-            pinctrl-single,pins = <
-               0x0a0 0x0d  // P8_45 pr1_pru1_pru_r30_0, MODE5 | OUTPUT | PRU   (LED output)
-               0x0a4 0x26  // P8_46 pr1_pru1_pru_r31_1, MODE6 | INPUT | PRU    (wheel encoder #1 input)
-               0x0a8 0x26  // P8_43 pr1_pru1_pru_r31_2, MODE6 | INPUT | PRU    (wheel encoder #2 input)
-               0x0ac 0x26  // P8_44 pr1_pru1_pru_r31_3, MODE6 | INPUT | PRU    (wheel encoder #3 input)
-               0x0b0 0x26  // P8_41 pr1_pru1_pru_r31_4, MODE6 | INPUT | PRU    (wheel encoder #4 input)
-               0x0b4 0x0d  // P8_42 pr1_pru1_pru_r30_5, MODE5 | OUTPUT | PRU   (PWM #1 output)
-               0x0b8 0x0d  // P8_39 pr1_pru1_pru_r30_6, MODE5 | OUTPUT | PRU   (PWM #2 output)
-               0x0bc 0x0d  // P8_40 pr1_pru1_pru_r30_7, MODE5 | OUTPUT | PRU   (PWM #3 output)
-               0x0e0 0x0d  // P8_27 pr1_pru1_pru_r30_8, MODE5 | OUTPUT | PRU   (PWM #4 output)
-               0x0e4 0x26  // P8_29 pr1_pru1_pru_r31_9, MODE6 | INPUT | PRU    (PB switch input)
+	 pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
+	    pinctrl-single,pins = <
+               0x0a0 0x0d  // P8_45 pr1_pru1_pru_r30_0, MODE5 | OUTPUT | PRU1   (LED output)
+	       0x0a4 0x26  // P8_46 pr1_pru1_pru_r31_1, MODE6 | INPUT  | PRU    (wheel encoder #1 input)
+               0x0a8 0x26  // P8_43 pr1_pru1_pru_r31_2, MODE6 | INPUT  | PRU    (wheel encoder #4 input)
+               0x0ac 0x26  // P8_44 pr1_pru1_pru_r31_3, MODE6 | INPUT  | PRU    (wheel encoder #2 input)
+               0x0b0 0x26  // P8_41 pr1_pru1_pru_r31_4, MODE6 | INPUT  | PRU    (wheel encoder #3 input)
+               0x0b4 0x0d  // P8_42 pr1_pru1_pru_r30_5, MODE5 | OUTPUT | PRU    (M1-1 PWM output)
+	       0x0e4 0x0d  // P8_29 pr1_pru1_pru_r30_9, MODE5 | OUTPUT | PRU    (M1-2 PWM output)
+               0x0b8 0x0d  // P8_39 pr1_pru1_pru_r30_6, MODE5 | OUTPUT | PRU    (M2-1 PWM output)
+               0x0e8 0x0d  // P8_28 pr1_pru1_pru_r30_10,MODE5 | OUTPUT | PRU    (M2-2 PWM output)
+	       0x0bc 0x0d  // P8_40 pr1_pru1_pru_r30_7, MODE5 | OUTPUT | PRU    (M3-1 PWM output)
+               0x0ec 0x0d  // P8_30 pr1_pru1_pru_r30_11,MODE5 | OUTPUT | PRU    (M3-2 PWM output)
+	       0x0e0 0x0d  // P8_27 pr1_pru1_pru_r30_8, MODE5 | OUTPUT | PRU    (M4-1 PWM output)
+               0x080 0x0d  // P8_21 pr1_pru1_pru_r30_12,MODE5 | OUTPUT | PRU    (M4-2 PWM output)       
+	       0x034 0x0d  // P8_11 pr0_pru0_pru_r30_14,MODE5 | OUTPUT | PRU    (PS2 DAT output)
+	       0x038 0x0d  // P8_12 pr0_pru0_pru_r30_15,MODE5 | OUTPUT | PRU    (PS2 CLK output)
+	       0x000 0x26  // P8_29 pr1_pru1_pru_r31_15,MODE6 | INPUT  | PRU    (Kill switch input)
+	       
+
             >;
          };
       };
