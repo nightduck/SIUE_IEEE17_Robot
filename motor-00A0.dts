@@ -43,6 +43,7 @@
 	    "pru1"
  
 
+
    fragment@0 {
       target = <&am33xx_pinmux>;
       __overlay__ {
