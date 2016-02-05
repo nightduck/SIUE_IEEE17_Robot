@@ -3,20 +3,27 @@
 //
 // We will 
 // - flash led 
-// - until button pressed and then exit
+// - until button pressed in pru0 then stop
+//
+//
+// TO DO: implement backwards and forewards on the motor controlers
+//
 //
 // r30.t0 => p8-45 (output) => LED for user feedback
-// r31.t9 => p8-29 (input) => switch for user input
 //
-// r31.t1 => wheel encoder 1 => P8-46 (input) 
-// r31.t2 => wheel encoder 2 => P8-43 (input) 
-// r31.t3 => wheel encoder 3 => P8-44 (input)
-// r31.t4 => wheel encoder 4 => P8-41 (input)
+// r31.t1 => wheel encoder M1 => P8-46 (input) 
+// r31.t2 => wheel encoder M4 => P8-43 (input) 
+// r31.t3 => wheel encoder M2 => P8-44 (input)
+// r31.t4 => wheel encoder M3 => P8-43 (input)
 //
-// r30.t5 => PWM output 1 => P8-42
-// r30.t6 => PWM output 2 => P8-39
-// r30.t7 => PWM output 3 => P8-40
-// r30.t8 => PWM output 4 => P8-27
+// r30.t5  => PWM output 1-1 => P8-42
+// r30.t9  => PWM output 1-2 => P8-29 -Keep low for now
+// r30.t6  => PWM output 2-1 => P8-39
+// r30.t10 => PWM output 2-2 => P8-28 -Keep low for now
+// r30.t7  => PWM output 3-1 => P8-40
+// r30.t11 => PWM output 3-2 => P8-30 -Keep low for now
+// r30.t8  => PWM output 4-1 => P8-27
+// r30.t12 => PWM output 4-2 => P8-21 -Keep low for now
 //
 // r0 => stores index i
 //
@@ -52,13 +59,13 @@
 // for (i = 4096, i != 0, i--) {  // use r0 for i
 //		read decoder inputs into r6
 //		if (posedge on wheel encoder 1) incr r1
-//		if (poseedge on wheel encoder 2) incr r2
-//		if (posedge on wheel encoder 3) incr r3
-//		if (posedge on wheel encoder 4) incr r4
-//		if (r7 == 0) clr r30.t5 else r7--
-//		if (r8 == 0) clr r30.t6	 else r8--
-//		if (r9 == 0) clr r30.t7 else r9--
-//		if (r10 == 0) clr r30.t8 else r10--
+//		if (posedge on wheel encoder 4) incr r2
+//		if (posedge on wheel encoder 2) incr r3
+//		if (posedge on wheel encoder 3) incr r4
+//		if (r7  == 0) clr r30.t5   else r7--
+//		if (r8  == 0) clr r30.t6   else r8--
+//		if (r9  == 0) clr r30.t7   else r9--
+//		if (r10 == 0) clr r30.t8   else r10--
 //		for (j = DELAY, j != 0, j--) { } // stall
 //		r5 = r6 
 //		Send interrupt to PRU 0
@@ -85,9 +92,11 @@
 
 #define		PRU_R31_VEC_VALID		32			// allows notification of program completion
 #define		PRU_EVTOUT_1			4			// event number that is sent back for PRU 1 to ARM interrupt
-#define		PRU1_PRU0_INTERRUPT		18			// PRU1-PRU0 interrupt number
+#define		PRU0_PRU1_INTERRUPT		17			// PRU0->PRU1 interrupt number
+#define		PRU1_PRU0_INTERRUPT		18			// PRU1->PRU0 interrupt number
 
-// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+// @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
 START:		clr		r30.t0					// turn LED OFF
 			zero	&r1, 116				// Clear r1-r29 (29 * 4 = 116 bytes)
@@ -128,8 +137,8 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 //			mov		r8, #4000
 //			mov		r9, #8000
 //			mov		r10, #12000
-
-			lbbo	r7, r27, 0, 16			// loading r7-r10
+			//accessing memory from pru0
+			lbbo	        r7, r27, 0, 16			// loading r7-r10
 
 			or		r30.b0, r30.b0, #0xe0	// make all PWM outputs high
 			or		r30.b1, r30.b1, #0x01	// make all PWM outputs high
@@ -137,93 +146,90 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 // We will check the wheel encoders 4096 times each sample period (50 ms)
 // So we need to do in about 3.05 us
 
-			mov		r0, #TIMES		 		// set i = 4096
-I_LOOP:		mov		r6.b0, r31.b0			// read wheel encoders
+			mov	r0, #TIMES	 		// set i = 4096
+	I_LOOP:		mov	r6.b0, r31.b0			// read wheel encoders
 
 // We can find rising edges by taking ~r5 & r6
 
-			not		r5.b0, r5.b0			// r5 <= ~r5
-			and		r5.b0, r5.b0, r6.b0		// r5 <= r5 & r6
+			not	r5.b0, r5.b0			// r5 <= ~r5
+			and	r5.b0, r5.b0, r6.b0		// r5 <= r5 & r6
 
 // Wheel encoder #1
 
- 			qbbc	ENC1_0, r5.t0
-			add		r1, r1, #1				// inc posedge counter
-			qba		ENC1_1
-ENC1_0:		mov		r29, r29				// nop
-			qba		ENC1_1			
-ENC1_1:		lsr		r5, r5, 1				// get next bit
+ 			qbbc	ENC1_0, r5.t0			// 
+			add	r1, r1, #1			// inc posedge counter
+			qba	ENC1_1
+	ENC1_0:		mov	r29, r29			// nop			
+	ENC1_1:		lsr	r5, r5, 1			// get next bit
 
-// Wheel encoder #2
-		
- 			qbbc	ENC2_0, r5.t0
-			add		r2, r2, #1				// inc posedge counter
-			qba		ENC2_1
-ENC2_0:		mov		r29, r29				// nop
-			qba		ENC2_1			
-ENC2_1:		lsr		r5, r5, 1				// get next bit
-
-// Wheel encoder #3
-
- 			qbbc	ENC3_0, r5.t0
-			add		r3, r3, #1				// inc posedge counter
-			qba		ENC3_1
-ENC3_0:		mov		r29, r29				// nop
-			qba		ENC3_1			
-ENC3_1:		lsr		r5, r5, 1
-	
 // Wheel encoder #4
 		
  			qbbc	ENC4_0, r5.t0
-			add		r4, r4, #1				// inc posedge counter
-			qba		ENC4_1
-ENC4_0:		mov		r29, r29				// nop
-			qba		ENC4_1	
+			add	r4, r4, #1			// inc posedge counter
+			qba	ENC4_1
+	ENC4_0:		mov	r29, r29			// nop
+	ENC4_1:		lsr	r5, r5, 1			// get next bit
+
+// Wheel encoder #2
+
+ 			qbbc	ENC2_0, r5.t0
+			add	r2, r2, #1			// inc posedge counter
+			qba	ENC2_0
+	ENC2_0:		mov	r29, r29			// nop		
+	ENC2_1:		lsr	r5, r5, 1			// get next bit
+	
+// Wheel encoder #3
+		
+ 			qbbc	ENC3_0, r5.t0
+			add	r3, r3, #1			// inc posedge counter
+			qba	ENC3_1
+	ENC3_0:		mov	r29, r29			// nop
+	ENC3_1:		qba	PWM1_0
 		
 // PWM output #1
 
-ENC4_1:		qbne	PWM1_0, r7, 0			// Time to low?
-			clr		r30.t5					// Bring output low
-			qba		PWM1_1
-PWM1_0:		sub		r7, r7, 1				// Dec pwm high counter
-			mov		r29, r29				// nop
+	PWM1_0:		qbne	PWM1_1, r7, 0			// Time to low?
+			clr	r30.t5				// Bring output low
+			qba	PWM1_1
+	PWM1_1:		sub	r7, r7, 1			// Dec pwm high counter
+			mov	r29, r29			// nop
 
 // PWM output #2
 
-PWM1_1:		qbne	PWM2_0, r8, 0			// Time to go low?
-			clr		r30.t6					// Bring output low
-			qba		PWM2_1					
-PWM2_0:		sub		r8, r8, 1				// Dec pwm high counter
-			mov		r29, r29				// nop
+	PWM2_0:		qbne	PWM2_1, r8, 0			// Time to go low?
+			clr	r30.t6				// Bring output low
+			qba	PWM2_1				
+	PWM2_1:		sub	r8, r8, 1			// Dec pwm high counter
+			mov	r29, r29			// nop
 
 // PWM output #3
 
-PWM2_1:		qbne	PWM3_0, r9, 0			// Time to go low?
-			clr		r30.t7					// Bring output low
-			qba		PWM3_1
-PWM3_0:		sub		r9, r9, 1				// Dec pwm high counter
-			mov		r29, r29				// nop
+	PWM3_0:		qbne	PWM3_1, r9, 0			// Time to go low?
+			clr	r30.t7				// Bring output low
+			qba	PWM3_1
+	PWM3_1:		sub	r9, r9, 1			// Dec pwm high counter
+			mov	r29, r29			// nop
 
 // PWM output #4
 
-PWM3_1:		qbne	PWM4_0, r10, 0			// Time to go low?
-			clr		r30.t8					// Bring output low
-			qba		PWM4_1
-PWM4_0:		sub		r10, r10, 1				// Dec pwm high counter
-			mov		r29, r29				// nop
+	PWM4_0:		qbne	PWM4_1, r10, 0			// Time to go low?
+			clr	r30.t8				// Bring output low
+			qba	PWM4_1
+	PWM4_1:		sub	r10, r10, 1			// Dec pwm high counter
+			mov	r29, r29			// nop
 
 // Kill some time before going back around
 
-PWM4_1:		mov		r11, r28				// store the length of delay in r11 (j)
-J_LOOP:		sub		r11, r11, 1				// Dec r11
+	PWM4_1:		mov	r11, r28			// store the length of delay in r11 (j)
+	J_LOOP:		sub	r11, r11, 1			// Dec r11
 			qbne	J_LOOP, r11, 0
 
 // Save the encoder counter values to shared memory
 
-			sbbo	&r1, r27, 16, 16		 	// save r1-r4 to memory after the 4 PWM values 
+			sbbo	&r1, r27, 16, 16		// save r1-r4 to memory after the 4 PWM values 
 // i loop
 
-			sub		r0,	r0, 1				// Dec i
+			sub	r0,	r0, 1			// Dec i
 			qbne	I_LOOP, r0, 0
 
 // If user button pressed, then let ARM know we are halting and then halt!

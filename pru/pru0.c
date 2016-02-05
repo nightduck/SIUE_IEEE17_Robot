@@ -21,9 +21,7 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 #define PRU0
 #define HOST1_MASK			(0x80000000)
 #define HOST0_MASK			(0x40000000)
-//#define PRU0_PRU1_EVT	(16)
-
-
+#define PRU0_PRU1_EVT		(16)
 #define PRU1_PRU0_EVT		(18)
 
 // Bit 3 is P9-28 
@@ -162,6 +160,8 @@ void main() {
 
    __R31 = 35;                      // PRUEVENT_0 on PRU0_R31_VEC_VALID 
    __halt();                        // halt the PRU
+
 }
+
 
 
