@@ -43,6 +43,11 @@
 // r10 => stores duration high (1 - 8190) for PWM 4
 //
 // r11 => stores index j
+// r16 => Used for GPIO_LED
+// r15 => Used for GPIO_BUTTON
+// r17 => Used for GPIO1_READ
+// r18 => Used for GPIO2_SET
+// r19 => Used for GPIO2_CLEAR
 // r29 => used for NOP
 //
 //
@@ -52,8 +57,9 @@
 // Turn LED OFF i.e. clr r30.t0
 // Clr r1 through 29
 // Send interrupt to PRU 0
+// Wait for return interrupt from PRU 0
 // LOOP: 
-// Toggle LED  (R30.t0)
+// //Toggle LED  (R30.t0)
 // Read in PWM high periods from PRU 0 into r7 - r10
 // Turn all 4 PWM outputs ON (r30.t8, r30.t7, r30.t6, r30.t5)
 // for (i = 4096, i != 0, i--) {  // use r0 for i
@@ -70,7 +76,7 @@
 //		r5 = r6 
 //		Send interrupt to PRU 0
 // }  // Loop should take exactly 50 ms to execute
-// if (button not pressed) goto LOOP else HALT
+// if (button press) goto LOOP else HALT
 //		
 
 // Don't think we need this but maybe at some point
@@ -82,51 +88,50 @@
 //	SBCO    r0, C4, 4, 4     // store the modified r0 back at the load addr
 
 
+#include        "./pru1.h"
 .origin		0
 .entrypoint	START
 
 
 // Number of times to loop (i.e. 12-bit PWM)
 
-#define		TIMES					4096		// 12-bit PWM
 
-#define		PRU_R31_VEC_VALID		32			// allows notification of program completion
-#define		PRU_EVTOUT_1			4			// event number that is sent back for PRU 1 to ARM interrupt
-#define		PRU0_PRU1_INTERRUPT		17			// PRU0->PRU1 interrupt number
-#define		PRU1_PRU0_INTERRUPT		18			// PRU1->PRU0 interrupt number
+
+
 
 
 // @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
 
-START:		clr		r30.t0					// turn LED OFF
-			zero	&r1, 116				// Clear r1-r29 (29 * 4 = 116 bytes)
-
+//START:			
+START:		        
+                        zero	&r1, 116				// Clear r1-r29 (29 * 4 = 116 bytes)
+                        GPIO_SETUP                                      // Setup Linux space GPIO
 // Grab the value we need for our delay loop
 // Host would have written it into location 0 of data memory
 // r28 will contain the value
-
 			zero	&r29, 4					// Point at location 0 in data memory
-			lbbo	r28, r29, 0, 4			// unsigned int is 4 bytes long
+			lbbo	r28, r29, 0, 4				// unsigned int is 4 bytes long
 
 // Use r27 as a pointer to the PRU shared data RAM ($0001_0000)
 // That is how we will transfer results to and from PRU 0
-
 			ldi		r27, 1
 			lsl		r27, r27, 16
 
-MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED) 
+MAIN:			LED_ON                                         	// toggle bit GPIO2_6 (LED)                       
+
 
 // Send interrput to PRU 0 to let it know about start of sample period!!!
 
 			ldi		r31, PRU1_PRU0_INTERRUPT + 16
 			
+			
 // Zero r1-r4
 			
-			zero	&r1, 16					// Zero the wheel encoder counters
+			zero		&r1, 16			// Zero the wheel encoder counters
 
 // Need to save the wheel encoder input values from past sample period
 
-			mov		r5, r6					// Copy r6 (new) wheel encoder values to r5 (old)
+			mov		r5, r6			// Copy r6 (new) wheel encoder values to r5 (old)
 
 // Read in R7 - R10 (PWM high times) from PRU0
 // For time being just set the r7-r10 registers
@@ -138,10 +143,11 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 //			mov		r9, #8000
 //			mov		r10, #12000
 			//accessing memory from pru0
-			lbbo	        r7, r27, 0, 16			// loading r7-r10
 
-			or		r30.b0, r30.b0, #0xe0	// make all PWM outputs high
-			or		r30.b1, r30.b1, #0x01	// make all PWM outputs high
+			lbbo	        r7, r27, 0, 16		// loading r7-r10
+			or		r30.b0, r30.b0, #0xe0	// make all primary PWM outputs high
+			or		r30.b1, r30.b1, #0x01	// make all primary PWM outputs high			//Change this to a define value with PWM outputs going high in one instruction
+                        and             r30.b1, r30.b1, #0x71   // make all secondary PWM outputs low
 
 // We will check the wheel encoders 4096 times each sample period (50 ms)
 // So we need to do in about 3.05 us
@@ -156,10 +162,11 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 
 // Wheel encoder #1
 
- 			qbbc	ENC1_0, r5.t0			// 
+ 			qbbc	ENC1_0, r5.t0			// If set to 0 jump to ENC1_0
 			add	r1, r1, #1			// inc posedge counter
-			qba	ENC1_1
-	ENC1_0:		mov	r29, r29			// nop			
+			qba	ENC1_1				// jump over the nop
+	ENC1_0:		mov	r29, r29			// nop
+                        qba     ENC1_1			
 	ENC1_1:		lsr	r5, r5, 1			// get next bit
 
 // Wheel encoder #4
@@ -168,37 +175,39 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 			add	r4, r4, #1			// inc posedge counter
 			qba	ENC4_1
 	ENC4_0:		mov	r29, r29			// nop
+                        qba     ENC4_1
 	ENC4_1:		lsr	r5, r5, 1			// get next bit
 
 // Wheel encoder #2
 
  			qbbc	ENC2_0, r5.t0
 			add	r2, r2, #1			// inc posedge counter
-			qba	ENC2_0
+			qba	ENC2_1
 	ENC2_0:		mov	r29, r29			// nop		
+                        qba     ENC2_1
 	ENC2_1:		lsr	r5, r5, 1			// get next bit
 	
 // Wheel encoder #3
 		
  			qbbc	ENC3_0, r5.t0
 			add	r3, r3, #1			// inc posedge counter
-			qba	ENC3_1
+			qba	PWM1_0
 	ENC3_0:		mov	r29, r29			// nop
-	ENC3_1:		qba	PWM1_0
+			qba	PWM1_0				// branch to next line (mimics timing for lsr)
 		
 // PWM output #1
 
-	PWM1_0:		qbne	PWM1_1, r7, 0			// Time to low?
-			clr	r30.t5				// Bring output low
-			qba	PWM1_1
-	PWM1_1:		sub	r7, r7, 1			// Dec pwm high counter
-			mov	r29, r29			// nop
+	PWM1_0:		qbne	PWM1_1, r7, 0			// Time to low? if yes bring low if not dec counter
+			clr	r30.t5				// 	Bring output low
+			qba	PWM2_0				// 	Jump to next PWM
+	PWM1_1:		sub	r7, r7, 1			// else Dec pwm high counter
+			mov	r29, r29			// 	nop (Mimic Jump)
 
 // PWM output #2
 
 	PWM2_0:		qbne	PWM2_1, r8, 0			// Time to go low?
 			clr	r30.t6				// Bring output low
-			qba	PWM2_1				
+			qba	PWM3_0				
 	PWM2_1:		sub	r8, r8, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
 
@@ -206,7 +215,7 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 
 	PWM3_0:		qbne	PWM3_1, r9, 0			// Time to go low?
 			clr	r30.t7				// Bring output low
-			qba	PWM3_1
+			qba	PWM4_0
 	PWM3_1:		sub	r9, r9, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
 
@@ -214,27 +223,39 @@ MAIN:		xor		r30, r30, #1			// toggle bit r30.t0 (i.. LED)
 
 	PWM4_0:		qbne	PWM4_1, r10, 0			// Time to go low?
 			clr	r30.t8				// Bring output low
-			qba	PWM4_1
+			qba	TIMEKILL			// Jump to the timeKiller -  done with PWM
 	PWM4_1:		sub	r10, r10, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
 
 // Kill some time before going back around
+// First clear the LED
+             
 
-	PWM4_1:		mov	r11, r28			// store the length of delay in r11 (j)
+	TIMEKILL:	mov	r11, r28			// store the length of delay in r11 (j)
 	J_LOOP:		sub	r11, r11, 1			// Dec r11
 			qbne	J_LOOP, r11, 0
-
 // Save the encoder counter values to shared memory
 
 			sbbo	&r1, r27, 16, 16		// save r1-r4 to memory after the 4 PWM values 
-// i loop
-
+// i loop               
 			sub	r0,	r0, 1			// Dec i
 			qbne	I_LOOP, r0, 0
 
 // If user button pressed, then let ARM know we are halting and then halt!
-			
-			qbbc	MAIN, r31.t9		
-			mov 	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
+	//AT THE MOMENT JUST BRANCH UNCONDITIONALLY TO MAIN AND CONTUINE THIS LOOP	
+			//Need to add code here to poll the GPIO right now we are just going 
+			//branch unconditionally and wait for the kernal to halt the pru
+	        	//qbbc	MAIN, r31.t9
+                        		
+			//ADD CODE HERE TO POLL THE USER SPACE GPIO
+                        BUTTON_CHK
+                        qbbc   MAIN, GPIO_BUTTON.t15            			
+                        LED_OFF
+
+	        	mov 	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
 			halt	
 
+
+
+
+			

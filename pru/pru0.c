@@ -17,12 +17,13 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 
 //  Defines 
 
-//#define PRU1
+//#define PRU-3
 #define PRU0
-#define HOST1_MASK			(0x80000000)
-#define HOST0_MASK			(0x40000000)
+#define HOST1_MASK		(0x80000000)
+#define HOST0_MASK		(0x40000000)
 #define PRU0_PRU1_EVT		(16)
 #define PRU1_PRU0_EVT		(18)
+#define PRU0_ARM_EVT		(34)
 
 // Bit 3 is P9-28 
 
@@ -73,10 +74,10 @@ void main() {
 
 // Store the 4 PWM values into shared memory
 
-	*p = 1 ;
-	*(p+1) = 1  ;
-	*(p+2) = 1 ;
-	*(p+3) = 1 ;
+	*p = 200 ;
+	*(p+1) = 400  ;
+	*(p+2) = 800 ;
+	*(p+3) = 1600 ;
 
 // We will use i to count intertupts
 // After seeing specified number we quit
@@ -102,8 +103,7 @@ void main() {
 			enc1 = *(p+4) ;
 			enc2 = *(p+5) ;
 			enc3 = *(p+6) ;
-			enc4 = *(p+7) ;	
-
+			enc4 = *(p+7) ;
 // Count the interrupts
  		
 			i += 1 ;
@@ -119,10 +119,10 @@ void main() {
 
 // Store the 4 PWM values into shared memory
 
-		*p = 500 ;
-		*(p+1) = 4000 ;
-		*(p+2) = 8000 ;
-		*(p+3) = 12000 ;
+		*p = 200 ;
+		*(p+1) = 400 ;
+		*(p+2) = 800 ;
+		*(p+3) = 1600 ;
 
 // Implement simple non-premptive real-time scheduler
 /*
@@ -139,7 +139,7 @@ void main() {
 
 			if (TimeSlot & (1 << 6)) { 
 				TimeSlot ^= (1 << 6) ;
-				TOGGLE_LED;
+				//TOGGLE_LED;
 			}
 */
 	}
@@ -157,7 +157,8 @@ void main() {
 */
 
 // Exiting the application - PRU 0 -> ARM interrupt
-
+//
+// 
    __R31 = 35;                      // PRUEVENT_0 on PRU0_R31_VEC_VALID 
    __halt();                        // halt the PRU
 

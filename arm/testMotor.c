@@ -17,6 +17,7 @@
 #include "mio.h"
 #include "ROBOTlib.h"
 #include "child.h"
+#include "BBBlib.h"
 
 // ON and OFF
 
@@ -27,7 +28,10 @@
 // PRU 1 is looking at wheel encoders and setting sample period
 
 #define     PRU0	0
-#define     PRU1    1 
+#define     PRU1	1 
+#define     SWITCH	47
+#define	    LED		70		
+
 
 // Pointer to pru 0 and pru 1 data memories (also shared)
 // Global and static
@@ -70,7 +74,7 @@ void PRUinit(void) {
 // Load and execute binary on PRU0 
 // Since using C-code for PRU, we need to give START_ADDR 
 
-  	prussdrv_exec_program_at(PRU0, "./text.bin", START_ADDR);
+ 	prussdrv_exec_program_at(PRU0, "./text.bin", START_ADDR);
 
 /* Load and execute binary on PRU1 */
 
@@ -123,7 +127,16 @@ int main (void) {
 // Calls a bunch of routines from PRU API
 // Loads and executes programs in PRU 0 and PRU 1
 
-	PRUinit() ;
+
+// Set up GPIO LED and SWITCH for testing
+	initPin(SWITCH);
+	initPin(70);
+	setPinDirection(SWITCH, "in");
+	setPinDirection(70, OUT);
+
+// Turn our LED on for testing
+	
+	PRUinit();
 
 // Here is a how you can write to PRU data memory
 // We are writing to PRU 1 memory here. A count used
@@ -132,7 +145,7 @@ int main (void) {
    	prussdrv_map_prumem(PRUSS0_PRU1_DATARAM, &pru1DataMemory);
    	pru1DataMemory_int = (unsigned int *) pru1DataMemory;
 
-   	unsigned int delay_cnt = 1000 ;         //delay factor
+   	unsigned int delay_cnt = 1000 ;         //delay factor - 1000 origininally
    	*(pru1DataMemory_int) = delay_cnt ;
 
 // First wait for PRU 0 to complete
@@ -143,12 +156,22 @@ int main (void) {
    	n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
 	printf("PRU 0 program completed, event number %d.\n", n);
 
+// TAKING THIS OUT FOR THE MOMENT - We will just send a singal to the PRU1 to halt now
 // Now wait for PRU 1 to complete
 // Person must press the momentary switch on prototype board
 
 	printf("Waiting for PRU 1 to complete.\n") ;
    	n = prussdrv_pru_wait_event (PRU_EVTOUT_1);  
 	printf("PRU 1 program completed, event number %d.\n", n);
+/*
+	n = 1;
+	while(getPinValue(SWITCH) == 0){
+		n ^=1;	
+		setPinValue(LED, n);
+	}
+	prussdrv_pru_send_event(ARM_PRU1_INTERRUPT);
+*/	//PRU1 should be set to HALT now
+
 
 // Here is how we can read from shared data memory
 // We'll read the PWM values and the encoder counter values
@@ -183,20 +206,19 @@ int main (void) {
 
 
 // Clean up our mess like mom taught us!
-
+	//
 	PRUcleanup() ;
 
 // Here is how we can spawn a child process
-
+/*
    	childpid = start_child("tclsh", &read_from, &write_to);
 
-/* Tell tclsh to source the tcl script */
-/* Anything sent to us from tcl script should be printed to screen */
+// Tell tclsh to source the tcl script
+// Anything sent to us from tcl script should be printed to screen
 
 //  	fprintf(write_to, "set a 2 ; set b 3; puts [expr $a + $b] \n") ;
 // 	if (fgets(str, 80, read_from) > 0)  printf("answer is %s\n", str) ;
 
-/*
 // Test the sonar module
 
     test_sonar() ;
