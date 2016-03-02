@@ -35,7 +35,7 @@
 	    "P8.44",			    // PRU1 r31.t3   (ENC-M2)		//	thanks for asking...
 	    "P8.41",			    // PRU1 r31.t4   (ENC-M3)		//
 	    "P8.43",			    // PRU1 r31.t2   (ENC-M4)		// Fix ordering in revB
-	    "P8.38",			    // ARM GPIO2[16] (Status LED)	//FIGURE OUT A BETTER WAY TO SET THESE
+	    "P8.38",			    // ARM GPIO2[15] (Status LED)	//FIGURE OUT A BETTER WAY TO SET THESE
 	    "P8.15",			    // ARM GPIO1[15] (KILL_SW) 		//	Currently set to Linux space GPIO which is fine for now
 	    "P8.11",			    // PRU0 r30.t15  (PS2 CLK) 
 	    "P8.12",			    // PRU0 r30.t14  (PS2 DAT) 

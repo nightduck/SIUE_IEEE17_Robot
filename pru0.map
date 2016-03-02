@@ -1,7 +1,7 @@
 ******************************************************************************
                      PRU Linker Unix v2.0.0                    
 ******************************************************************************
->> Linked Sat Feb 27 03:24:03 2016
+>> Linked Tue Mar  1 16:05:36 2016
 
 OUTPUT FILE NAME:   <pru0.elf>
 ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 00000130

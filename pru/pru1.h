@@ -17,7 +17,7 @@
 #define         GPIO_SETDATAOUT                 0x194                   //Setting GPIO
 #define         GPIO_DATAOUT                    0x138                   //reading GPIO
 #define         GPIO1_15_MASK                   0x80                    //SWITCH
-#define         GPIO2_6_MASK                    0x40                    //LED
+#define         GPIO2_15_MASK                   0x80                    //LED
 #define         GPIO_BUTTON                     r15
 #define         GPIO_LED                        r16
 #define         read_gpio1                      r17
@@ -27,7 +27,7 @@
 
 .macro			GPIO_SETUP
 
-			lbco	r0, c4, 4, 4          // load SYSCFG reg into r0 (use c4 const addr)
+			lbco	r0, c4, 4, 4     // load SYSCFG reg into r0 (use c4 const addr)
                         clr     r0, r0, 4        // clear bit 4 (STANDBY_INIT)
                         sbco    r0, c4, 4, 4     // store the modified r0 back at the load addr  
                         mov     read_gpio1, GPIO1 | GPIO_DATAOUT
@@ -36,7 +36,7 @@
 .endm
 
 .macro			LED_ON
-	                set    GPIO_LED.t6
+	                set    GPIO_LED.t15
                         sbbo   GPIO_LED, set_gpio2, 0, 4
 .endm
 

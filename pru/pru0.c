@@ -119,7 +119,7 @@ void main() {
 
 // Store the 4 PWM values into shared memory
 
-		*p = 200 ;
+		*p = 2048 ;
 		*(p+1) = 400 ;
 		*(p+2) = 800 ;
 		*(p+3) = 1600 ;

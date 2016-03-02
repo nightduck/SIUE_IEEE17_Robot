@@ -30,7 +30,7 @@
 #define     PRU0	0
 #define     PRU1	1 
 #define     SWITCH	47
-#define	    LED		70		
+#define	    LED		79		
 
 
 // Pointer to pru 0 and pru 1 data memories (also shared)
@@ -130,9 +130,9 @@ int main (void) {
 
 // Set up GPIO LED and SWITCH for testing
 	initPin(SWITCH);
-	initPin(70);
-	setPinDirection(SWITCH, "in");
-	setPinDirection(70, OUT);
+	initPin(LED);
+	setPinDirection(SWITCH, IN);
+	setPinDirection(LED, OUT);
 
 // Turn our LED on for testing
 	
@@ -156,22 +156,13 @@ int main (void) {
    	n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
 	printf("PRU 0 program completed, event number %d.\n", n);
 
-// TAKING THIS OUT FOR THE MOMENT - We will just send a singal to the PRU1 to halt now
+// We will just send a singal to the PRU1 to halt now
 // Now wait for PRU 1 to complete
 // Person must press the momentary switch on prototype board
 
 	printf("Waiting for PRU 1 to complete.\n") ;
    	n = prussdrv_pru_wait_event (PRU_EVTOUT_1);  
 	printf("PRU 1 program completed, event number %d.\n", n);
-/*
-	n = 1;
-	while(getPinValue(SWITCH) == 0){
-		n ^=1;	
-		setPinValue(LED, n);
-	}
-	prussdrv_pru_send_event(ARM_PRU1_INTERRUPT);
-*/	//PRU1 should be set to HALT now
-
 
 // Here is how we can read from shared data memory
 // We'll read the PWM values and the encoder counter values
