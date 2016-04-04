@@ -36,7 +36,7 @@
 .endm
 
 .macro			LED_ON
-	                set    GPIO_LED.t15
+	                set    GPIO_LED.b1, GPIO_LED.b1, GPIO2_15_MASK
                         sbbo   GPIO_LED, set_gpio2, 0, 4
 .endm
 
@@ -46,6 +46,12 @@
 .endm
 
 .macro			LED_OFF
-                        clr     GPIO_LED.t15
+                        set     GPIO_LED.b1, GPIO_LED.b1, GPIO2_15_MASK
                         sbbo    GPIO_LED, clr_gpio2, 0, 4
+.endm
+
+.macro			LED_TOGGLE
+			sbbo	GPIO_LED, clr_gpio2, 0, 4
+			xor 	GPIO_LED.b1, GPIO_LED.b1, GPIO2_15_MASK
+			sbbo	GPIO_LED, set_gpio2, 0, 4
 .endm

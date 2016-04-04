@@ -28,7 +28,7 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 // Bit 3 is P9-28 
 
 #define TOGGLE_LED			(__R30 ^= (1 << 3))
-
+#define TOGGLE_EN			(__R30 &= (1))
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Subroutine to perform initialization
@@ -89,13 +89,11 @@ void main() {
 	int flag = 1;
 
 	while (flag == 1) { 
-
+		
 // Wait for the start of the new sample period i.e. interrupt from PRU 1
-
 		if (__R31 & HOST0_MASK) {
 
 // Clear interrupt event 18 
-
 			CT_INTC.SICR = PRU1_PRU0_EVT ;
 
 // Read the wheel encoder counters 
@@ -118,11 +116,12 @@ void main() {
 // Where we would call the PID routines
 
 // Store the 4 PWM values into shared memory
-
+		//__asm__ __volatile__(" MOV r30.b0, 0xFF\n") ;
 		*p = 2048 ;
 		*(p+1) = 400 ;
 		*(p+2) = 800 ;
 		*(p+3) = 1600 ;
+//		__R30 |= 0xFFFFFFFF;
 
 // Implement simple non-premptive real-time scheduler
 /*

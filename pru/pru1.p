@@ -117,7 +117,7 @@ START:
 			ldi		r27, 1
 			lsl		r27, r27, 16
 
-MAIN:			//LED_ON                                         	// toggle bit GPIO2_6 (LED)                       
+MAIN:			                                         	// toggle bit GPIO2_6 (LED)                       
 
 
 // Send interrput to PRU 0 to let it know about start of sample period!!!
@@ -165,7 +165,8 @@ MAIN:			//LED_ON                                         	// toggle bit GPIO2_6 
 
 // Wheel encoder #1
  			qbbc	ENC1_0, r12.t1			// If set to 0 jump to ENC1_0
-			add	r1, r1, #1			// inc posedge counter
+			//add	r1, r1, #1			// inc posedge counter
+                        LED_TOGGLE
 			qba	ENC1_1				// jump over the nop
 	ENC1_0:		mov	r29, r29			// nop
                         qba     ENC1_1			
@@ -254,12 +255,29 @@ MAIN:			//LED_ON                                         	// toggle bit GPIO2_6 
                         BUTTON_CHK
                         
                         qbbc   MAIN, GPIO_BUTTON.t15            			
-	        	LED_OFF
+                        mov    r30, 0x0000FE1          //Set PWM's to High for hard brake 	        	
+                        LED_OFF
                         mov 	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
 			
                         halt	
 
 
 
+/*
+                        set     GPIO_LED.t15
+                        sbbo    GPIO_LED, set_gpio2, 0, 4
+MAIN:                   ldi             r31, PRU1_PRU0_INTERRUPT + 16
+TIMEKILL:               mov     r11, r28                        // store the length of delay in r11 (j)
+J_LOOP:                 sub     r11, r11, 1                     // Dec r11
+                        qbne    J_LOOP, r11, 0
+                        BUTTON_CHK
+                        qbbc    MAIN, GPIO_BUTTON.t15
+                        //LED_TOGGLE
+                        set     GPIO_LED.t15
+                        sbbo    GPIO_LED,r19, 0, 4
+                        mov     r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
+                        halt    
 
+*/                       
+        
 		

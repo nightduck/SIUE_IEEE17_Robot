@@ -119,7 +119,7 @@ int main (void) {
 
 // Number of times we run PRU program
 
-   	int n;
+   	int n = 0;
 
 	printf("Running tst-Brd\n") ;
 
@@ -153,7 +153,7 @@ int main (void) {
 // from PRU 1
 
 	printf("Waiting for PRU 0 to complete.\n") ;
-   	n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
+   	//n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
 	printf("PRU 0 program completed, event number %d.\n", n);
 
 // We will just send a singal to the PRU1 to halt now
