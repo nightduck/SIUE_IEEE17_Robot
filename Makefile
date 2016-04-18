@@ -19,7 +19,8 @@ P_FILES := $(PRU)/pru1.p
 
 # List the dts files that need tBBo be compiles
 
-DTS_FILES := ./motor-00A0.dts
+DTS_FILES := ./motor-revA-00A0.dts
+DTS_FILES += ./motor-revB-00A0.dts
 
 # Start address for PRU C object
 

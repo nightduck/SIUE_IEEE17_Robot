@@ -1,0 +1,108 @@
+
+/* DTO for the Beaglebone black PID motor board Rev-B
+ * Ver - 2.0
+ * Clayton Faber - 2016
+ */
+
+/dts-v1/;
+/plugin/;
+
+/ {
+   compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+   part-number = "BBB-PID-MOTOR";
+   version = "00A0";
+
+   /* This overlay uses the following resources */
+   exclusive-use =
+            "P9.11",                        // general purpose output   
+            "P9.13",                        // general purpose input
+	    "P9.30",			    // PRU0 r30.
+	    "P9.29",			    // PRU0 r30.
+	    "P9.28",			    // PRU0 r30.
+	    "P9.27",	   		    // PRU0 r30.
+ 	    "P9.31",			    // PRU0 r30.
+	    "P9.25",			    // PRU0 r30.
+	    "P8.42",			    // PRU1 r30.t5   (M1-1 PWM)
+	    "P8.29", 			    // PRU1 r30.t9   (M1-2 PWM)
+            "P8.39",			    // PRU1 r30.t6   (M2-1 PWM)
+	    "P8.28",			    // PRU1 r30.t10
+	    "P8.40",			    // PRU1 r30.t7   (M3-1 PWM)
+	    "P8.30",			    // PRU1 r30.t11  (M3-2 PWM)
+	    "P8.27",			    // PRU1 r30.t8   (M4-1 PWM)
+	    "P8.45",			    // PRU1 r30.t0   (M4-2 PWM)		//Originaly set for LED moved to M4-2 for rev A board to avoid disabling the emmc2
+	    "P8.46",			    // PRU1 r31.t1   (ENC-M1)		// Why yes, I am an idiot
+	    "P8.44",			    // PRU1 r31.t3   (ENC-M2)		//	thanks for asking...
+	    "P8.41",			    // PRU1 r31.t4   (ENC-M3)		//
+	    "P8.43",			    // PRU1 r31.t2   (ENC-M4)		// Fix ordering in revB
+	    "P8.38",			    // ARM GPIO2[15] (Status LED)	//FIGURE OUT A BETTER WAY TO SET THESE
+	    "P8.15",			    // ARM GPIO1[15] (KILL_SW)
+	    "P8.16",	 		//	Currently set to Linux space GPIO which is fine for now
+	    "P8.11",			    // ARM GPIO  () 
+	    "P8.12",			    // PRU0 r30.t14  (PS2 DAT) 
+            "pru0",			    // Claim use of the PRUs here
+	    "pru1";			    // and here
+ 
+
+
+   fragment@0 {
+      target = <&am33xx_pinmux>;
+      __overlay__ {
+
+         gpio_pins: pinmux_gpio_pins {         // The GPIO pins
+            pinctrl-single,pins = <
+               0x070 0x07 // P9_11 MODE7 | OUTPUT | 
+               0x074 0x27 // P9_13 MODE7 | INPUT  | 
+	       0x03C 0x27 // P8_15 MODE7 | INPUT  | GPIO pull-down (Kill Switch)
+	       0x0C4 0x07 // P8_38 MODE7 | OUTPUT | GPIO pull-up (LED)
+	       //0x190 0x17 // P9_31 MODE7 | OUTPUT | GPIO3[14] 
+            >;
+         };
+
+	 pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
+	    pinctrl-single,pins = <
+	       0x0a4 0x26  // P8_46 pr1_pru1_pru_r31_1, MODE6 | INPUT  | PRU    (wheel encoder #1 input)
+               0x0a8 0x26  // P8_43 pr1_pru1_pru_r31_2, MODE6 | INPUT  | PRU    (wheel encoder #4 input)
+               0x0ac 0x26  // P8_44 pr1_pru1_pru_r31_3, MODE6 | INPUT  | PRU    (wheel encoder #2 input)
+               0x0b0 0x26  // P8_41 pr1_pru1_pru_r31_4, MODE6 | INPUT  | PRU    (wheel encoder #3 input)
+               0x0b4 0x0d  // P8_42 pr1_pru1_pru_r30_5, MODE5 | OUTPUT | PRU    (M1-1 PWM output)
+	       0x0e4 0x0d  // P8_29 pr1_pru1_pru_r30_9, MODE5 | OUTPUT | PRU    (M1-2 PWM output)
+               0x0b8 0x0d  // P8_39 pr1_pru1_pru_r30_6, MODE5 | OUTPUT | PRU    (M2-1 PWM output)
+               0x0e8 0x0d  // P8_28 pr1_pru1_pru_r30_10,MODE5 | OUTPUT | PRU    (M2-2 PWM output)
+	       0x0bc 0x0d  // P8_40 pr1_pru1_pru_r30_7, MODE5 | OUTPUT | PRU    (M3-1 PWM output)
+               0x0ec 0x0d  // P8_30 pr1_pru1_pru_r30_11,MODE5 | OUTPUT | PRU    (M3-2 PWM output)
+	       0x0e0 0x0d  // P8_27 pr1_pru1_pru_r30_8, MODE5 | OUTPUT | PRU    (M4-1 PWM output)
+               0x0A0 0x0d  // P8_21 pr1_pru1_pru_r30_0, MODE5 | OUTPUT | PRU    (M4-2 PWM output)
+	       0x1a4 0x0d
+	       0x19c 0x0d
+	       0x194 0x0d
+	       0x198 0x0d
+	       0x190 0x0d  // P9_31 pru0_pru0_pru_r30_0, MODE5 | OUTPUT | PRU	(enable bus tranciver)
+	       0x1ac 0x0d
+
+            >;
+         };
+      };
+   };
+
+   fragment@1 {         // Enable the PRUSS
+      target = <&pruss>;
+      __overlay__ {
+         status = "okay";
+         pinctrl-names = "default";
+         pinctrl-0 = <&pru_pru_pins>;
+      };
+   };
+
+   fragment@2 {         // Enable the GPIOs
+      target = <&ocp>;
+      __overlay__ {
+         gpio_helper {
+            compatible = "gpio-of-helper";
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&gpio_pins>;
+         };
+      };
+   };
+};

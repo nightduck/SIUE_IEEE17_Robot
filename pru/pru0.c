@@ -121,7 +121,7 @@ void main() {
 		*(p+1) = 400 ;
 		*(p+2) = 800 ;
 		*(p+3) = 1600 ;
-//		__R30 |= 0xFFFFFFFF;
+	//	__R30 |= 0xFFFFFFFF;
 
 // Implement simple non-premptive real-time scheduler
 /*
