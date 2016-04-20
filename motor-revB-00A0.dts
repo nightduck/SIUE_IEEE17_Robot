@@ -10,38 +10,41 @@
 / {
    compatible = "ti,beaglebone", "ti,beaglebone-black";
 
-   part-number = "BBB-PID-MOTOR";
+   part-number = "BB-PID-MOTOR";
    version = "00A0";
 
    /* This overlay uses the following resources */
    exclusive-use =
-            "P9.11",                        // general purpose output   
-            "P9.13",                        // general purpose input
-	    "P9.30",			    // PRU0 r30.
-	    "P9.29",			    // PRU0 r30.
-	    "P9.28",			    // PRU0 r30.
-	    "P9.27",	   		    // PRU0 r30.
- 	    "P9.31",			    // PRU0 r30.
-	    "P9.25",			    // PRU0 r30.
-	    "P8.42",			    // PRU1 r30.t5   (M1-1 PWM)
-	    "P8.29", 			    // PRU1 r30.t9   (M1-2 PWM)
-            "P8.39",			    // PRU1 r30.t6   (M2-1 PWM)
-	    "P8.28",			    // PRU1 r30.t10
-	    "P8.40",			    // PRU1 r30.t7   (M3-1 PWM)
-	    "P8.30",			    // PRU1 r30.t11  (M3-2 PWM)
-	    "P8.27",			    // PRU1 r30.t8   (M4-1 PWM)
-	    "P8.45",			    // PRU1 r30.t0   (M4-2 PWM)		//Originaly set for LED moved to M4-2 for rev A board to avoid disabling the emmc2
-	    "P8.46",			    // PRU1 r31.t1   (ENC-M1)		// Why yes, I am an idiot
-	    "P8.44",			    // PRU1 r31.t3   (ENC-M2)		//	thanks for asking...
-	    "P8.41",			    // PRU1 r31.t4   (ENC-M3)		//
-	    "P8.43",			    // PRU1 r31.t2   (ENC-M4)		// Fix ordering in revB
-	    "P8.38",			    // ARM GPIO2[15] (Status LED)	//FIGURE OUT A BETTER WAY TO SET THESE
-	    "P8.15",			    // ARM GPIO1[15] (KILL_SW)
-	    "P8.16",	 		//	Currently set to Linux space GPIO which is fine for now
-	    "P8.11",			    // ARM GPIO  () 
-	    "P8.12",			    // PRU0 r30.t14  (PS2 DAT) 
-            "pru0",			    // Claim use of the PRUs here
-	    "pru1";			    // and here
+        //   P9-Header	//
+	"P9.17",	// I2C-2 - SCL
+	"P9.18",	// I2C-2 - SDA
+	"P9.22",        // Accel. GPIO Interrupt - IN2 gpio0[2]   
+	"P9.25",	// Accel. PRU0 Interrupt - IN1 (r31.t7)
+	"P9.27",	// PRU0 r30.t5 - Buffers Enable
+
+        //   P8-Header	//
+	"P8.11",	// PRU0 r30.t15 - PRU0 LED
+	"P8.12",	// GPIO1[14]    - GPIO LED
+	"P8.15",	// GPIO1[15]    - GPIO SWITCH
+	"P8.16",	// PRU0 r31.t14 - PRU0 SWITCH
+	"P8.27",	// PRU1 r31.t8  - ENC1
+	"P8.28",	// PRU1 r31.t10 - ENC3
+	"P8.29",	// PRU1 r31.t9  - ENC2
+	"P8.30",	// PRU1 r31.t11 - ENC4
+	"P8.39",	// PRU1 r30.t6  - M4-0
+	"P8.40",	// PRU1 r30.t7  - M4-1
+	"P8.41",	// PRU1 r30.t4  - M2-0
+	"P8.42",	// PRU1 r30.t5  - M2-1
+	"P8.43",	// PRU1 r30.t2  - M1-0
+	"P8.44",	// PRU1 r30.t3  - M1-1
+	"P8.45",	// PRU1 r30.t0  - M3-0
+	"P8.46",	// PRU1 r30.t1  - M3-1
+
+	//   Devices	//
+	"i2c1",      // Claim use of I2C-2
+	
+	"pru0",		// Claim use of the PRUs here
+	"pru1";		// and here
  
 
 
@@ -51,35 +54,39 @@
 
          gpio_pins: pinmux_gpio_pins {         // The GPIO pins
             pinctrl-single,pins = <
-               0x070 0x07 // P9_11 MODE7 | OUTPUT | 
-               0x074 0x27 // P9_13 MODE7 | INPUT  | 
-	       0x03C 0x27 // P8_15 MODE7 | INPUT  | GPIO pull-down (Kill Switch)
-	       0x0C4 0x07 // P8_38 MODE7 | OUTPUT | GPIO pull-up (LED)
-	       //0x190 0x17 // P9_31 MODE7 | OUTPUT | GPIO3[14] 
+		0x150 0x27 // P9_22 MODE7 | INPUT  | GPIO Pull-Down  //Used for Accelerometer Interrupt (opt.) 
+                0x030 0x07 // P8_12 MODE7 | OUTPUT | GPIO Output LED //GPIO Status LED
+		0x03c 0x27 // P8_15 MODE7 | INPUT  | GPIO pull-down  //GPIO Switch Input
             >;
          };
 
 	 pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
 	    pinctrl-single,pins = <
-	       0x0a4 0x26  // P8_46 pr1_pru1_pru_r31_1, MODE6 | INPUT  | PRU    (wheel encoder #1 input)
-               0x0a8 0x26  // P8_43 pr1_pru1_pru_r31_2, MODE6 | INPUT  | PRU    (wheel encoder #4 input)
-               0x0ac 0x26  // P8_44 pr1_pru1_pru_r31_3, MODE6 | INPUT  | PRU    (wheel encoder #2 input)
-               0x0b0 0x26  // P8_41 pr1_pru1_pru_r31_4, MODE6 | INPUT  | PRU    (wheel encoder #3 input)
-               0x0b4 0x0d  // P8_42 pr1_pru1_pru_r30_5, MODE5 | OUTPUT | PRU    (M1-1 PWM output)
-	       0x0e4 0x0d  // P8_29 pr1_pru1_pru_r30_9, MODE5 | OUTPUT | PRU    (M1-2 PWM output)
-               0x0b8 0x0d  // P8_39 pr1_pru1_pru_r30_6, MODE5 | OUTPUT | PRU    (M2-1 PWM output)
-               0x0e8 0x0d  // P8_28 pr1_pru1_pru_r30_10,MODE5 | OUTPUT | PRU    (M2-2 PWM output)
-	       0x0bc 0x0d  // P8_40 pr1_pru1_pru_r30_7, MODE5 | OUTPUT | PRU    (M3-1 PWM output)
-               0x0ec 0x0d  // P8_30 pr1_pru1_pru_r30_11,MODE5 | OUTPUT | PRU    (M3-2 PWM output)
-	       0x0e0 0x0d  // P8_27 pr1_pru1_pru_r30_8, MODE5 | OUTPUT | PRU    (M4-1 PWM output)
-               0x0A0 0x0d  // P8_21 pr1_pru1_pru_r30_0, MODE5 | OUTPUT | PRU    (M4-2 PWM output)
-	       0x1a4 0x0d
-	       0x19c 0x0d
-	       0x194 0x0d
-	       0x198 0x0d
-	       0x190 0x0d  // P9_31 pru0_pru0_pru_r30_0, MODE5 | OUTPUT | PRU	(enable bus tranciver)
-	       0x1ac 0x0d
-
+		//	P9	//
+		0x1ac 0x26  // P9_25 pru0_r31.t7,  MODE6 | INPUT  | PRU // Used for Accelerometer Interrupt (opt.)
+		0x1a4 0x0D  // P9_27 pru0_r30.t5,  MODE5 | OUTPUT | PRU // Used to enable buffers
+		//	P8	//
+		0x034 0x0E  // P8_11 pru0_r30.t15, MODE6 | INPUT  | PRU // Used for PRU0 Switch
+		0x038 0x26  // P8_16 pru0_r31.t14, MODE6 | OUTPUT | PRU // Used for PRU0 LED
+		0x0E0 0x26  // P8_27 pru1_r31.t8,  MODE6 | INPUT  | PRU // ENC1 Input
+		0x0E4 0x26  // P8_29 pru1_r31.t9,  MODE6 | INPUT  | PRU // ENC2 Input
+		0x0E8 0x26  // P8_28 pru1_r31.t10, MODE6 | INPUT  | PRU // ENC3 Input
+		0x0EC 0x26  // P8_30 pru1_r31.t11, MODE6 | INPUT  | PRU // ENC4 Input
+		0x0A0 0x0D  // P8_45 pru1_r30.t0,  MODE5 | OUTPUT | PRU	// M3-0 Output
+		0x0A4 0x0D  // P8_46 pru1_r30.t1,  MODE5 | OUTPUT | PRU // M3-1 Output
+		0x0A8 0x0D  // P8_43 pru1_r30.t2,  MODE5 | OUTPUT | PRU // M1-0 Output 
+		0x0AC 0x0D  // P8_44 pru1_r30.t3,  MODE5 | OUTPUT | PRU // M1-1 Output
+		0x0B0 0x0D  // P8_41 pru1_r30.t4,  MODE5 | OUTPUT | PRU // M2-0 Output
+		0x0B4 0x0D  // P8_42 pru1_r30.t5,  MODE5 | OUTPUT | PRU // M2-1 Output
+		0x0B8 0x0D  // P8_39 pru1_r30.t6,  MODE5 | OUTPUT | PRU // M4-0 Output
+		0x0BC 0x0D  // P8_40 pru1_r30.t7,  MODE5 | OUTPUT | PRU // M4-1 Output
+            >;
+         };
+	 
+	 bb_i2c1_pins: pinmux_bb_i2c1_pins {
+                pinctrl-single,pins = <
+                0x158 0x72    // i2c2_sda,  SLEWCTRL_SLOW | IMPUT_PULLUP | MODE3
+                0x15c 0x72    // i2c2_scl,  SLEWCTRL_SLOW | INPUT_PULLUP | MODE3
             >;
          };
       };
@@ -103,6 +110,20 @@
             pinctrl-names = "default";
             pinctrl-0 = <&gpio_pins>;
          };
+      };
+   };
+   
+   fragment@3{
+      target = <&i2c1>;    
+      __overlay__ {
+      	status = "okay";
+      	pinctrl-names = "default";
+      	pinctrl-0 = <&bb_i2c1_pins>;
+	clock-frequency = <100000>;
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+
       };
    };
 };
