@@ -21,6 +21,8 @@ P_FILES := $(PRU)/pru1.p
 
 DTS_FILES := ./motor-revA-00A0.dts
 DTS_FILES += ./motor-revB-00A0.dts
+DTS_FILES += ./BB-PRU-PID-MOTOR-00A0.dts
+
 
 # Start address for PRU C object
 
