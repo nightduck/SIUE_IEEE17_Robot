@@ -8,34 +8,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <assert.h>
 
 // These can be found in ../include
 
-#include "prussdrv.h"
-#include "pruss_intc_mapping.h"
-#include "mio.h"
 #include "ROBOTlib.h"
 #include "child.h"
-#include "BBBlib.h"
+#include "motorPRU.h"
 
-// ON and OFF
-
-#define		ON  	1
-#define		OFF	0
-
-// PRU 0 is running C-code for PID control
-// PRU 1 is looking at wheel encoders and setting sample period
-
-#define     PRU0	0
-#define     PRU1	1 
-#define     SWITCH	47
-#define	    LED		79		
-
-
-// Pointer to pru 0 and pru 1 data memories (also shared)
-// Global and static
-
+//These will eventually be added to the PRU Class
 static void *pru0DataMemory;
 static unsigned int *pru0DataMemory_int;
 
@@ -45,17 +25,20 @@ static unsigned int *pru1DataMemory_int;
 static void *pruSharedDataMemory;
 static unsigned int *pruSharedDataMemory_int;
 
+
+
+
 // ********************************
 // Initialization routine
 // ********************************
 
-void PRUinit(void) {
+/*void PRUinit(void) {
 // Initialize structure used by prussdrv_pruintc_intc   
 // PRUSS_INTC_INITDATA is found in pruss_intc_mapping.h 
 
    tpruss_intc_initdata pruss_intc_initdata = PRUSS_INTC_INITDATA;
 
-/* Allocate and initialize memory */
+// Allocate and initialize memory 
 
    prussdrv_init ();
 
@@ -76,22 +59,22 @@ void PRUinit(void) {
 
  	prussdrv_exec_program_at(PRU0, "./text.bin", START_ADDR);
 
-/* Load and execute binary on PRU1 */
+// Load and execute binary on PRU1 
 
    	prussdrv_exec_program(PRU1, "./pru1.bin");   
 
-/* Wait for event completion from PRU 1 */
+// Wait for event completion from PRU 1 
 	
 	return ;
 }
-
+*/
 // ****************************
 // Routine to clean up 
 // ****************************
-
+/*
 void PRUcleanup(void) {
 
-/* Disable PRU and close memory mappings */
+///Disable PRU and close memory mappings 
 
 	printf("Disabling the PRUs and exiting\n") ;
 
@@ -102,7 +85,7 @@ void PRUcleanup(void) {
 
 	return ;
 }
-
+*/
 // **********************************
 // Main program
 // **********************************
@@ -136,7 +119,7 @@ int main (void) {
 
 // Turn our LED on for testing
 	
-	PRUinit();
+	motorInit();
 
 // Here is a how you can write to PRU data memory
 // We are writing to PRU 1 memory here. A count used
@@ -153,9 +136,9 @@ int main (void) {
 // from PRU 1
 
 	printf("Waiting for PRU 0 to complete.\n") ;
-   	//n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
+   	n = prussdrv_pru_wait_event (PRU_EVTOUT_0);  
 	printf("PRU 0 program completed, event number %d.\n", n);
-
+	prussdrv_pru_clear_event (PRU_EVTOUT_0,PRU0_ARM_INTERRUPT);
 // We will just send a singal to the PRU1 to halt now
 // Now wait for PRU 1 to complete
 // Person must press the momentary switch on prototype board
@@ -163,6 +146,7 @@ int main (void) {
 	printf("Waiting for PRU 1 to complete.\n") ;
    	n = prussdrv_pru_wait_event (PRU_EVTOUT_1);  
 	printf("PRU 1 program completed, event number %d.\n", n);
+	prussdrv_pru_clear_event (PRU_EVTOUT_1, PRU1_ARM_INTERRUPT);
 
 // Here is how we can read from shared data memory
 // We'll read the PWM values and the encoder counter values
@@ -197,8 +181,8 @@ int main (void) {
 
 
 // Clean up our mess like mom taught us!
-	//
-	PRUcleanup() ;
+
+	motorCleanup();
 
 // Here is how we can spawn a child process
 /*

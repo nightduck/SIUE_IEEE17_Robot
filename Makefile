@@ -11,6 +11,7 @@ C_FILES += $(ARM)/srf02.c
 C_FILES += $(ARM)/BBBlib.c
 C_FILES += $(ARM)/ROBOTlib.c
 C_FILES += $(ARM)/child.c
+C_FILES += $(ARM)/motorPRU.c
 
 # List the assembler files for the PRUs
 
@@ -19,9 +20,7 @@ P_FILES := $(PRU)/pru1.p
 
 # List the dts files that need tBBo be compiles
 
-DTS_FILES := ./motor-revA-00A0.dts
-DTS_FILES += ./motor-revB-00A0.dts
-DTS_FILES += ./BB-PRU-PID-MOTOR-00A0.dts
+DTS_FILES := ./BB-PRUPID-MOTOR-00A0.dts
 
 
 # Start address for PRU C object

@@ -8,28 +8,33 @@
 //
 // TO DO: implement backwards and forewards on the motor controlers
 //
+// ********************************************************
+// Output/Input Layout
+// ********************************************************
+// GPIO1[28] > LED for user feedback
+// GPIO1[16] > Switch for user input
+// r30.t0 => PWM output (3-0)
+// r30.t1 => PWM output (3-1)
+// r30.t2 => PWM output (1-0)
+// r30.t3 => PWM output (1-1)
+// r30.t4 => PWM output (2-0)
+// r30.t5 => PWM output (2-1)
+// r30.t6 => PWM output (4-0)
+// r30.t7 => PWM output (4-1)
+// r31.t8 => ENC_1
+// r31.t9 => ENC_2
+// r31.t10=> ENC_3
+// r31.t11=> ENC_4
 //
-// GPIO2[16] > LED for user feedback
-// GPIO1[15] > Switch for user input
-// r31.t1 => wheel encoder M1 => P8-46 (input) 
-// r31.t2 => wheel encoder M4 => P8-43 (input) 
-// r31.t3 => wheel encoder M2 => P8-44 (input)
-// r31.t4 => wheel encoder M3 => P8-43 (input)
-// r30.t5  => PWM output 1-1 => P8-42
-// r30.t9  => PWM output 1-2 => P8-29 -Keep low for now
-// r30.t6  => PWM output 2-1 => P8-39
-// r30.t10 => PWM output 2-2 => P8-28 -Keep low for now
-// r30.t7  => PWM output 3-1 => P8-40
-// r30.t11 => PWM output 3-2 => P8-30 -Keep low for now
-// r30.t8  => PWM output 4-1 => P8-27
-// r30.t0  => PWM output 4-2 => P8-45 -Keep low for now
-//
+// *******************************************************
+// Register Layout
+// *******************************************************
 // r0 => stores index i
 //
 // r1 => counts rising transitions on wheel encoder 1 input
 // r2 => counts rising transitions on wheel encoder 2 input
-// r3 => counts rising transitions on wheel encoder 3 input
-// r4 => counts rising transitions on wheel encoder 4 input
+// r3 => counts on wheel encoder 3 input
+// r4 => counts on wheel encoder 4 input
 //
 // r5 => stores the old encoder inputs
 // r6 => stores the new encoder inputs
@@ -116,6 +121,7 @@ START:
 // That is how we will transfer results to and from PRU 0
 			ldi		r27, 1
 			lsl		r27, r27, 16
+                        LED_TOGGLE
 
 MAIN:			                                         	// toggle bit GPIO2_6 (LED)                       
 
@@ -124,13 +130,12 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 
 			ldi		r31, PRU1_PRU0_INTERRUPT + 16
 			
-			
 // Zero r1-r4
-			
-			zero		&r1, 16			// Zero the wheel encoder counters
+
+//			zero		&r1, 16			// Zero the wheel encoder counters
 
 // Need to save the wheel encoder input values from past sample period
-                       mov		r5, r6			// Copy r6 (new) wheel encoder values to r5 (old)
+                        mov		r5, r6			// Copy r6 (new) wheel encoder values to r5 (old)
                        
 // Read in R7 - R10 (PWM high times) from PRU0
 // For time being just set the r7-r10 registers
@@ -143,67 +148,58 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 //			mov		r10, #12000
 			//accessing memory from pru0
 
-			lbbo	        r7, r27, 0, 16		// loading r7-r10
-//			or        	r30.b0, r30.b0, #0xe0	// make all primary PWM outputs high
-//			or		r30.b1, r30.b1, #0x01	// make all primary PWM outputs high			//Change this to a define value with PWM outputs going high in one instruction
-//                      and             r30, r30.b1, #0xF1   // make all secondary PWM outputs low
-//                      and             r30, r30.b0, #0xF7
-
-                        mov             r30, 0x000001e0         //Make all the primary PWM outputs high (t5,t6,t7,t8)
-                                                                //and ground the secondary (t9,t10,t11,t0)
+			lbbo	        r7, r27, 0, 16	       // loading r7-r10
+                        mov             r30, 0x0000055         //Make all the primary PWM outputs high 
+                                                               //and ground the secondary 
 
 // We will check the wheel encoders 4096 times each sample period (50 ms)
 // So we need to do in about 3.05 us
 
 			mov	r0, #TIMES	 		// set i = 4096
-	I_LOOP:		mov	r6.b0, r31.b0			// read wheel encoders
-                        //lsr     r6, r6, 1                       // remove bit 0
-// We can find rising edges by taking ~r5 & r6
+	I_LOOP:		mov	r6.b1, r31.b1			// read wheel encoders
 
-			not	r12.b0, r5.b0			// r12 <= ~r5
-			and	r12.b0, r12.b0, r6.b0		// r12 <= r12 & r6
+
+// We can find edges by finding r5 xor r6
+
+			//not	r12.b1, r5.b1			// r12 <= ~r5
+			//and	r12.b1, r12.b1, r6.b1		// r12 <= r12 & r6
+                        xor     r12.b1 , r6.b1, r5.b1
 
 // Wheel encoder #1
- 			qbbc	ENC1_0, r12.t1			// If set to 0 jump to ENC1_0
-			//add	r1, r1, #1			// inc posedge counter
-                        LED_TOGGLE
-			qba	ENC1_1				// jump over the nop
-	ENC1_0:		mov	r29, r29			// nop
-                        qba     ENC1_1			
-//	ENC1_1:		lsr	r5, r5, 1			// get next bit
-        ENC1_1:         mov     r29,r29
+        ENC1_1:		qbbc	ENC1_0, r12.b1.t0			// If set to 0 jump to ENC1_0
+        		add	r1, r1, 1			// inc posedge counter
+                        qba     ENC2_1                          // over delay to next
+        ENC1_0:         mov     r29,r29                         //Mimic add
+                        mov     r29,r29                         //Mimic qba
+
+// Wheel encoder #2
+		
+ 	ENC2_1:		qbbc	ENC2_0, r12.b1.t1                  // If clr jump ENC_0
+			add	r2, r2, #1			// inc posedge count
+                        qba     ENC3_1                          // Jump over delay
+        ENC2_0:         mov     r29, r29                        //Mimic Add
+                        mov     r29, r29                        //Mimic qba
+// Wheel encoder #3
+
+        ENC3_1:		qbbc	ENC3_0, r12.b1.t2
+			add	r3, r3, 1
+//                        qbeq    SKIP,r3, 255			// inc posedge counter
+			qba	ENC4_1
+	ENC3_0:		mov	r29, r29			// nop	
+                        mov     r29, r29	
 
 // Wheel encoder #4
 		
- 			qbbc	ENC4_0, r12.t2
+ 	ENC4_1:		qbbc	ENC4_0, r12.b1.t3
 			add	r4, r4, #1			// inc posedge counter
-			qba	ENC4_1
-	ENC4_0:		mov	r29, r29			// nop
-                        qba     ENC4_1
-//	ENC4_1:		lsr	r5, r5, 1			// get next bit
-        ENC4_1:         mov     r29, r29
-// Wheel encoder #2
-
- 			qbbc	ENC2_0, r12.t3
-			add	r2, r2, #1			// inc posedge counter
-			qba	ENC2_1
-	ENC2_0:		mov	r29, r29			// nop		
-                        qba     ENC2_1
-//	ENC2_1:		lsr	r5, r5, 1			// get next bit
-        ENC2_1:         mov     r29, r29	
-// Wheel encoder #3
-		
- 			qbbc	ENC3_0, r12.t4
-			add	r3, r3, #1			// inc posedge counter
 			qba	PWM1_0
-	ENC3_0:		mov	r29, r29			// nop
-			qba	PWM1_0				// branch to next line (mimics timing for lsr)
-                        
+	ENC4_0:		mov	r29, r29			// nop
+                        mov     r29, r29 
                         		
 // PWM output #1
 
 	PWM1_0:		qbne	PWM1_1, r7, 0			// Time to low? if yes bring low if not dec counter
-			clr	r30.t5				// 	Bring output low
+			clr	r30.t2				// 	Bring output low
 			qba	PWM2_0				// 	Jump to next PWM
 	PWM1_1:		sub	r7, r7, 1			// else Dec pwm high counter
 			mov	r29, r29			// 	nop (Mimic Jump)
@@ -211,7 +207,7 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 // PWM output #2
 
 	PWM2_0:		qbne	PWM2_1, r8, 0			// Time to go low?
-			clr	r30.t6				// Bring output low
+			clr	r30.t4				// Bring output low
 			qba	PWM3_0				
 	PWM2_1:		sub	r8, r8, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
@@ -219,7 +215,7 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 // PWM output #3
 
 	PWM3_0:		qbne	PWM3_1, r9, 0			// Time to go low?
-			clr	r30.t7				// Bring output low
+			clr	r30.t0				// Bring output low
 			qba	PWM4_0
 	PWM3_1:		sub	r9, r9, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
@@ -227,7 +223,7 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 // PWM output #4
 
 	PWM4_0:		qbne	PWM4_1, r10, 0			// Time to go low?
-			clr	r30.t8				// Bring output low
+			clr	r30.t6				// Bring output low
 			qba	TIMEKILL			// Jump to the timeKiller -  done with PWM
 	PWM4_1:		sub	r10, r10, 1			// Dec pwm high counter
 			mov	r29, r29			// nop
@@ -235,10 +231,10 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 // Kill some time before going back around
 // First clear the LED
              
-
 	TIMEKILL:	mov	r11, r28			// store the length of delay in r11 (j)
 	J_LOOP:		sub	r11, r11, 1			// Dec r11
 			qbne	J_LOOP, r11, 0
+                        mov     r1, 0x50505050
 // Save the encoder counter values to shared memory
 			sbbo	&r1, r27, 16, 16		// save r1-r4 to memory after the 4 PWM values 
 // i loop               
@@ -251,14 +247,12 @@ MAIN:			                                         	// toggle bit GPIO2_6 (LED)
 			//branch unconditionally and wait for the kernal to halt the pru
 	        	//qbbc	MAIN, r31.t9
                         		
-			//ADD CODE HERE TO POLL THE USER SPACE GPIO
                         BUTTON_CHK
-                        
-                        qbbc   MAIN, GPIO_BUTTON.t15            			
-                        mov    r30, 0x0000FE1          //Set PWM's to High for hard brake 	        	
+                        LED_TOGGLE
+                        qbbc   MAIN, GPIO_BUTTON.b1.t7            			
+SKIP:                   mov    r30, 0x00000000          //Set PWM's to low 	        	
                         LED_OFF
-                        mov 	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1
-			
+                        mov 	r31.b0, PRU_R31_VEC_VALID | PRU_EVTOUT_1	
                         halt	
 
 

@@ -11,7 +11,6 @@ volatile register uint32_t __R31;
 /* Mapping Constant table register to variable */
 
 volatile pruCfg CT_CFG __attribute__((cregister("PRU_CFG", near), peripheral));
-
 volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripheral));
 
 
@@ -24,11 +23,23 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 #define PRU0_PRU1_EVT		(16)
 #define PRU1_PRU0_EVT		(18)
 #define PRU0_ARM_EVT		(34)
+#define	PRU0_RAM		(0x00000000)
+#define PRU1_RAM		(0x00008000)
+#define SHARE_RAM		(0x00010000)
 
-// Bit 3 is P9-28 
 
-#define TOGGLE_LED			(__R30 ^= (1 << 3))
-#define TOGGLE_EN			(__R30 &= (1))
+// Bit 15 is P8-11
+// Bit 14 is p8-16
+// Bit 07 is p9-25
+// Bit 05 is p9-27
+
+#define TOGGLE_PRU_LED			(__R30 ^= (0x00008000)) //Bit 15
+#define OFF_PRU_LED			(__R30 &= (0xFFFF7FFF))
+#define ON_PRU_LED			(__R30 |= (0x00008000))
+#define DISABLE_DRV			(__R30 |= (0x00000020)) //Bit 5 Neg logic
+#define ENABLE_DRV			(__R30 &= (0xFFFFFFDF)) //Bit 5 Neg logic
+#define PRU_SW_VALUE			(__R31  & (0x00004000))	//Bit 14
+#define	ACC_IN1_VAL			(__R31  & (0x00000080))	//Bit 7
 
 // ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Subroutine to perform initialization
@@ -39,7 +50,7 @@ void init(void) {
 	CT_CFG.GPCFG0 = 0x0000;
 
 /* Clear GPO pins */
-	__R30 &= 0xFFFF0000;
+	//__R30 &= 0xFFFF0000;
 
 /* Clear interrupt event 18 */
 	
@@ -76,7 +87,7 @@ void main() {
 
 	*p = 200 ;
 	*(p+1) = 400  ;
-	*(p+2) = 800 ;
+	*(p+2) = 200 ;
 	*(p+3) = 1600 ;
 
 // We will use i to count intertupts
@@ -87,7 +98,11 @@ void main() {
 
 	int i = 0;
 	int flag = 1;
+	
+// Enable the Motor Driver signals
 
+// Start the loop
+	//TOGGLE_PRU_LED;
 	while (flag == 1) { 
 		
 // Wait for the start of the new sample period i.e. interrupt from PRU 1
@@ -109,18 +124,17 @@ void main() {
 
 //		__delay_cycles(5); 	
 
-// Wait for 50 interrupts and then we will quit
-					
-		if (i == 50) flag = 0 ;
-
+// Wait for 50 interrupts and then we will quit					
+		if (i == 5) flag = 0 ;
+		if (i == 5) ENABLE_DRV;
 // Where we would call the PID routines
 
 // Store the 4 PWM values into shared memory
 		//__asm__ __volatile__(" MOV r30.b0, 0xFF\n") ;
 		*p = 2048 ;
 		*(p+1) = 400 ;
-		*(p+2) = 800 ;
-		*(p+3) = 1600 ;
+		*(p+2) = 3072 ;
+		*(p+3) = 200 ;
 	//	__R30 |= 0xFFFFFFFF;
 
 // Implement simple non-premptive real-time scheduler
@@ -158,7 +172,18 @@ void main() {
 // Exiting the application - PRU 0 -> ARM interrupt
 //
 // 
-   __R31 = 35;                      // PRUEVENT_0 on PRU0_R31_VEC_VALID 
+   //TOGGLE_PRU_LED;
+   __R31 = 35;
+   while(!PRU_SW_VALUE){
+	TOGGLE_PRU_LED;
+	i = 0;
+	i = 1;
+	i = 3;
+	i = 4;
+	i = 5;
+   }                      // PRUEVENT_0 on PRU0_R31_VEC_VALID 
+   DISABLE_DRV;
+   OFF_PRU_LED;
    __halt();                        // halt the PRU
 
 }
