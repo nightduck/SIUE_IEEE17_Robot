@@ -119,9 +119,12 @@ MAIN:		        // Send interrput to PRU 0 to let it know about start of sample p
 // mimic a break for status reg
                         update_status_reg
                         qbbc   STOP, run_flag
+// mimic a break for update
+                        qbbs   UPDATE, update_flag     
 // Decrement i if there is no break
         		dec     i			
 			qbne	I_LOOP, i, 0
+                        led_TOGGLE
 // If user button pressed, then let ARM know we are halting and then halt!
                         qbpr    HALT_PRU1                //Go to halt pru1 if button press
                         qba     MAIN                     //go back to main if no button press
@@ -129,14 +132,15 @@ HALT_PRU1:              mov     r30, 0x00000000          //Set PWM's to low
                         send_ARM_interrupt               //Send the ARM interrupt	
                         halt	
 
+UPDATE:                 clear_update_flag                 //assumes that you do not want to save enc tics   
 STOP:                   pwm_stop                                // Stop PWM
-                        zero            &enc1, 16                 // Zero the wheel Encoders
+                        led_OFF
+//                        zero            &enc1, 16                 // Zero the wheel Encoders
         PWM_WAIT:       qbpr            HALT_PRU1               // If we got a button press in this mode
                         update_status_reg                       // Read in new statusReg Value
                         qbbs            MAIN, run_flag          // If we got a start bit restart
                         mov             j, delayValue           // If not loop here and keep checking
-        WAIT_LOOP:      dec             j
-                        led_TOGGLE                       
+        WAIT_LOOP:      dec             j                       
                         qbne            WAIT_LOOP, j, 0
                         qba             PWM_WAIT
 

@@ -117,6 +117,7 @@ void main() {
 	int i = 0;
 	int j = 1;
 	int flag = 1;
+	int bState = 0;
 	//PRU_LED_ON;	
 // Enable the Motor Driver signals
 	ENABLE_DRV;
@@ -133,7 +134,7 @@ void main() {
 // Start the loop
 	
 	while (flag == 1) { 
-		if(i >= 5){
+		if(i >= 7){
                         flag = 0;
                 }		
 // Wait for the start of the new sample period i.e. interrupt from PRU 1
@@ -147,26 +148,46 @@ void main() {
 			enc2 = *(sharedMem+5) ;
 			enc3 = *(sharedMem+6) ;
 			enc4 = *(sharedMem+7) ;
-// Count the interrupts
 		} 
-
-//		__delay_cycles(5); 	
-
-// Wait for 50 interrupts and then we will quit					
 		if (PRU_SW_VALUE){
-			i++;
-			DISABLE_DRV;
-			for(j=0; j < 100; j++){}
-			if(i == 1 || i == 5) {*pru1Mem = (M_RUN | M1_CCW | M2_CW | M3_CW | M4_CW); }
-			else if(i==3){ *pru1Mem = *pru1Mem & ~M_RUN; } //Try cleaing the start bit
-			else { *pru1Mem = (M_RUN | M_HARD_BREAK | M1_CW | M2_CCW | M3_CW | M4_CW); }
-			while(PRU_SW_VALUE){}
-			for(j = 0; j < 100; j++){}
-			while(PRU_SW_VALUE){}
-			ENABLE_DRV;
-		} 
+			if(bState == 0){
+				bState = 1;
+				i++;
+				DISABLE_DRV;
+				if(i == 1 || i == 5) {
+					*pru1Mem = (M_RUN | M_HARD_BREAK | M1_CCW | M2_CW | M3_CW | M4_CW); 
+					if(i == 1){
+						*sharedMem = 200;
+						*(sharedMem+1) = 200;
+					}
+					if(i == 5){
+						*sharedMem = 3072;
+						*(sharedMem+1) = 3072;
+					}
+				}
+				else{
+					if(i==3){ *pru1Mem = *pru1Mem & ~M_RUN; } //Try cleaing the start bit
+					else { 
+						*pru1Mem = (M_RUN | M_HARD_BREAK | M_UPDATE | M1_CW | M2_CCW | M3_CW | M4_CW); //Currently update clears encoder tics
+				 		*sharedMem = 2048;
+				        	*(sharedMem+1) = 2048  ;
+					}
+				}
+				ENABLE_DRV;	
+				while(PRU_SW_VALUE){}                                                           //Trying to make sure that the button has been released
+			}
+		}	 
 		if(i >= 4){
 			ON_PRU_LED;
+		}
+		//Trying to prevent bounces
+		if(bState == 1){
+			j++;
+		}
+		if(j == 50000){
+			bState = 0;
+			j = 0;
+		
 		}
 // Where we would call the PID routines
 

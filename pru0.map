@@ -1,10 +1,10 @@
 ******************************************************************************
                      PRU Linker Unix v2.0.0                    
 ******************************************************************************
->> Linked Tue May 24 17:38:46 2016
+>> Linked Tue May 24 21:00:43 2016
 
 OUTPUT FILE NAME:   <pru0.elf>
-ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 000001fc
+ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 00000218
 
 
 MEMORY CONFIGURATION
@@ -12,7 +12,7 @@ MEMORY CONFIGURATION
          name            origin    length      used     unused   attr    fill
 ----------------------  --------  ---------  --------  --------  ----  --------
 PAGE 0:
-  PRU_IMEM              00000000   00002000  00000220  00001de0  RWIX
+  PRU_IMEM              00000000   00002000  0000023c  00001dc4  RWIX
 
 PAGE 1:
   PRU_DMEM_0_1          00000000   00002000  00000100  00001f00  RWIX
@@ -54,11 +54,11 @@ SECTION ALLOCATION MAP
  output                                  attributes/
 section   page    origin      length       input sections
 --------  ----  ----------  ----------   ----------------
-.text      0    00000000    00000220     
-                  00000000    000001fc     pru0.obj (.text:main)
-                  000001fc    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
-                  00000210    00000008                     : exit.obj (.text:abort)
-                  00000218    00000008                     : exit.obj (.text:loader_exit)
+.text      0    00000000    0000023c     
+                  00000000    00000218     pru0.obj (.text:main)
+                  00000218    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
+                  0000022c    00000008                     : exit.obj (.text:abort)
+                  00000234    00000008                     : exit.obj (.text:loader_exit)
 
 .stack     1    00000000    00000100     UNINITIALIZED
                   00000000    00000004     rtspruv2_le.lib : boot.obj (.stack)
@@ -91,7 +91,7 @@ GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name
 
 address    name
 --------   ----
-00000218   C$$EXIT
+00000234   C$$EXIT
 00020000   CT_INTC
 481cc000   __PRU_CREG_BASE_DCAN0
 481d0000   __PRU_CREG_BASE_DCAN1
@@ -165,9 +165,9 @@ address    name
 00000001   __TI_exit
 ffffffff   __binit__
 ffffffff   __c_args__
-000001fc   _c_int00_noinit_noargs_noexit
+00000218   _c_int00_noinit_noargs_noexit
 00000000   _stack
-00000210   abort
+0000022c   abort
 ffffffff   binit
 00000000   main
 
@@ -217,9 +217,9 @@ address    name
 0000001f   __PRU_CREG_DDR
 00000100   __TI_STACK_END
 00000100   __TI_STACK_SIZE
-000001fc   _c_int00_noinit_noargs_noexit
-00000210   abort
-00000218   C$$EXIT
+00000218   _c_int00_noinit_noargs_noexit
+0000022c   abort
+00000234   C$$EXIT
 00002000   __PRU_CREG_BASE_PRU_DMEM_1_0
 00010000   __PRU_CREG_BASE_PRU_SHAREDMEM
 00020000   CT_INTC

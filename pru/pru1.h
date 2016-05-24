@@ -26,6 +26,7 @@
 #define		enc4_bit			r11.b1.t3
 
 #define         run_flag                        r29.b1.t0
+#define         update_flag                     r29.b1.t2
 
 // Define register aliaies
 #define		enc1				r1
@@ -372,4 +373,14 @@ L1:
                 lsl     sharedMem, sharedMem, 16
 .endm
 
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// clear_update_flag
+//
+// Description:
+//	removes the update flag from memory so there isn't
+//	 a stop loop
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.macro		clear_update_flag
+		clr	update_flag
+		sbbo	stateReg, pru1Mem, 0, 4
+.endm
