@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include "pru_cfg.h"
 #include "pru_intc.h"
+#include "fp.h"
 
 volatile register uint32_t __R30;
 volatile register uint32_t __R31;
@@ -16,17 +17,28 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 
 //  Defines 
 
-//#define PRU-3
+//#define PRU addresses
 #define PRU0
 #define HOST1_MASK		(0x80000000)
 #define HOST0_MASK		(0x40000000)
 #define PRU0_PRU1_EVT		(16)
 #define PRU1_PRU0_EVT		(18)
 #define PRU0_ARM_EVT		(34)
-#define	PRU0_RAM		(0x00000000)
-#define PRU1_RAM		(0x00008000)
-#define SHARE_RAM		(0x00010000)
+#define	PRU0_MEM		(0x00000000)
+#define PRU1_MEM		(0x00002000)
+#define SHARE_MEM		(0x00010000)
 
+#define M_RUN			(0x00000100)
+#define M_HARD_BREAK		(0x00000200)
+#define M_UPDATE		(0x00000400)
+#define M1_CW			(0x00000004)
+#define M1_CCW			(0x00000008)
+#define M2_CW			(0x00000010)
+#define M2_CCW			(0x00000020)
+#define M3_CW			(0x00000001)
+#define M3_CCW			(0x00000002)
+#define M4_CW			(0x00000040)
+#define M4_CCW			(0x00000080)
 
 // Bit 15 is P8-11
 // Bit 14 is p8-16
@@ -47,7 +59,9 @@ volatile far pruIntc CT_INTC __attribute__((cregister("PRU_INTC", far), peripher
 void init(void) {
 
 /* Configure GPI and GPO as Mode 0 (Direct Connect) */
-	CT_CFG.GPCFG0 = 0x0000;
+//	TODO: if the userspace GPIOs are to be used this will
+//		need to change currently is freezes the pru
+//	CT_CFG.GPCFG0 = 0x0000;
 
 /* Clear GPO pins */
 	//__R30 &= 0xFFFF0000;
@@ -55,6 +69,7 @@ void init(void) {
 /* Clear interrupt event 18 */
 	
 	CT_INTC.SICR = PRU1_PRU0_EVT ; 	
+
 
 	return ;
 }
@@ -66,29 +81,32 @@ void init(void) {
 void main() {
 
 // Used by real-time scheduler
-
-	unsigned int temp, TimeSlot, SliceCounter ;
-	TimeSlot = 0 ;
-	SliceCounter = 0 ;
-
-
+// NOT USING THESE AT THE MOMENT
+	//unsigned int temp, TimeSlot, SliceCounter ;
+	//TimeSlot = 0 ;
+	//SliceCounter = 0 ;
+	
 // Perform initialization
 
-	init() ;
-		
+//	init() ;
+// TODO: change this so that any init values for memory pointing, Globals may be a good idea		
 //
 // Writing the 4 PWM values into the shared memory block (address is 0x0001_0000)
 // PRU 1 will grab them and place the values intr R7 - R10
 
-	int	* p ;
-	p = (int *) 0x00010000 ;
+	int	* sharedMem ;
+	int	* pru1Mem;
+	pru1Mem	  = (int *) PRU1_MEM ;	
+	sharedMem = (int *) SHARE_MEM ;
 
 // Store the 4 PWM values into shared memory
 
-	*p = 200 ;
-	*(p+1) = 400  ;
-	*(p+2) = 200 ;
-	*(p+3) = 1600 ;
+	*sharedMem = 2048;
+	*(sharedMem+1) = 2048  ;
+	*(sharedMem+2) = 800  ;
+	*(sharedMem+3) = 1600 ;
+// Store the PRU1 status value
+	*pru1Mem = (M_RUN | M1_CW | M2_CCW | M3_CW | M4_CW);
 
 // We will use i to count intertupts
 // After seeing specified number we quit
@@ -97,14 +115,27 @@ void main() {
 	volatile int enc1, enc2, enc3, enc4 ;
 
 	int i = 0;
+	int j = 1;
 	int flag = 1;
-	
+	//PRU_LED_ON;	
 // Enable the Motor Driver signals
-
+	ENABLE_DRV;
+// Clear the first interrupt
+	while(flag == 1){
+		if(__R31 & HOST0_MASK){
+			CT_INTC.SICR = PRU1_PRU0_EVT;
+			flag = 0;
+		}
+	}
+	//__R31 = 35;
+	flag = 1;
+		//Send an interrupt to ARM
 // Start the loop
-	//TOGGLE_PRU_LED;
+	
 	while (flag == 1) { 
-		
+		if(i >= 5){
+                        flag = 0;
+                }		
 // Wait for the start of the new sample period i.e. interrupt from PRU 1
 		if (__R31 & HOST0_MASK) {
 
@@ -112,79 +143,42 @@ void main() {
 			CT_INTC.SICR = PRU1_PRU0_EVT ;
 
 // Read the wheel encoder counters 
-
-			enc1 = *(p+4) ;
-			enc2 = *(p+5) ;
-			enc3 = *(p+6) ;
-			enc4 = *(p+7) ;
+			enc1 = *(sharedMem+4) ;
+			enc2 = *(sharedMem+5) ;
+			enc3 = *(sharedMem+6) ;
+			enc4 = *(sharedMem+7) ;
 // Count the interrupts
- 		
-			i += 1 ;
 		} 
 
 //		__delay_cycles(5); 	
 
 // Wait for 50 interrupts and then we will quit					
-		if (i == 5) flag = 0 ;
-		if (i == 5) ENABLE_DRV;
+		if (PRU_SW_VALUE){
+			i++;
+			DISABLE_DRV;
+			for(j=0; j < 100; j++){}
+			if(i == 1 || i == 5) {*pru1Mem = (M_RUN | M1_CCW | M2_CW | M3_CW | M4_CW); }
+			else if(i==3){ *pru1Mem = *pru1Mem & ~M_RUN; } //Try cleaing the start bit
+			else { *pru1Mem = (M_RUN | M_HARD_BREAK | M1_CW | M2_CCW | M3_CW | M4_CW); }
+			while(PRU_SW_VALUE){}
+			for(j = 0; j < 100; j++){}
+			while(PRU_SW_VALUE){}
+			ENABLE_DRV;
+		} 
+		if(i >= 4){
+			ON_PRU_LED;
+		}
 // Where we would call the PID routines
 
-// Store the 4 PWM values into shared memory
-		//__asm__ __volatile__(" MOV r30.b0, 0xFF\n") ;
-		*p = 2048 ;
-		*(p+1) = 400 ;
-		*(p+2) = 3072 ;
-		*(p+3) = 200 ;
-	//	__R30 |= 0xFFFFFFFF;
-
-// Implement simple non-premptive real-time scheduler
-/*
-			temp = SliceCounter++ ;
-			TimeSlot |= temp ^ SliceCounter + 1 ;
-
-// Do every 100 ms
-
-			if (TimeSlot & (1 << 2)) { 
-				TimeSlot ^= (1 << 2) ;
-			}
-		
-// Do every 1.6 sec
-
-			if (TimeSlot & (1 << 6)) { 
-				TimeSlot ^= (1 << 6) ;
-				//TOGGLE_LED;
-			}
-*/
 	}
-
-
-// Just a test to show that you can use assembly instructions
-// directly.  Also writing distintive value into data memory
-// location 0 to prove that the C-program on arm can read it!
-// Pointing r1 to start of PRU shared memory block
-/*
-	__asm__ __volatile__(" LDI   r1, 1 \n") ;
-	__asm__ __volatile__(" LSL   r1, r1, 16 \n") ;
-	__asm__ __volatile__(" LDI   r2, 0xabcd \n") ;
-	__asm__ __volatile__(" SBBO  &r2, r1, 0, 4 \n") ;
-*/
-
-// Exiting the application - PRU 0 -> ARM interrupt
-//
-// 
-   //TOGGLE_PRU_LED;
-   __R31 = 35;
-   while(!PRU_SW_VALUE){
-	TOGGLE_PRU_LED;
-	i = 0;
-	i = 1;
-	i = 3;
-	i = 4;
-	i = 5;
-   }                      // PRUEVENT_0 on PRU0_R31_VEC_VALID 
-   DISABLE_DRV;
-   OFF_PRU_LED;
-   __halt();                        // halt the PRU
+//	*(sharedMem+4) = 0;
+//	*(sharedMem+5) = 0;
+// 	*(sharedMem+6) = 0;
+//	*(sharedMem+7) = 0;
+   	DISABLE_DRV;
+   	OFF_PRU_LED;
+	__R31 = 35;
+   	__halt();                        // halt the PRU
 
 }
 

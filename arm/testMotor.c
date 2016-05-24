@@ -129,7 +129,7 @@ int main (void) {
    	pru1DataMemory_int = (unsigned int *) pru1DataMemory;
 
    	unsigned int delay_cnt = 1000 ;         //delay factor - 1000 origininally
-   	*(pru1DataMemory_int) = delay_cnt ;
+   	*(pru1DataMemory_int+1) = delay_cnt ;
 
 // First wait for PRU 0 to complete
 // Has to received a specified number of interrupts

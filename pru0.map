@@ -1,10 +1,10 @@
 ******************************************************************************
                      PRU Linker Unix v2.0.0                    
 ******************************************************************************
->> Linked Thu May 12 17:40:30 2016
+>> Linked Tue May 24 17:38:46 2016
 
 OUTPUT FILE NAME:   <pru0.elf>
-ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 00000170
+ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 000001fc
 
 
 MEMORY CONFIGURATION
@@ -12,14 +12,14 @@ MEMORY CONFIGURATION
          name            origin    length      used     unused   attr    fill
 ----------------------  --------  ---------  --------  --------  ----  --------
 PAGE 0:
-  PRU_IMEM              00000000   00002000  00000194  00001e6c  RWIX
+  PRU_IMEM              00000000   00002000  00000220  00001de0  RWIX
 
 PAGE 1:
   PRU_DMEM_0_1          00000000   00002000  00000100  00001f00  RWIX
   PRU_DMEM_1_0          00002000   00002000  00000000  00002000  RWIX
   PRU_SHAREDMEM         00010000   00003000  00000000  00003000  RWIX
   PRU_INTC              00020000   00001504  00001504  00000000  RWIX
-  PRU_CFG               00026000   00000100  00000044  000000bc  RWIX
+  PRU_CFG               00026000   00000100  00000000  00000100  RWIX
   PRU_UART              00028000   00000100  00000000  00000100  RWIX
   PRU_IEP               0002e000   0000031c  00000000  0000031c  RWIX
   PRU_ECAP              00030000   00000100  00000000  00000100  RWIX
@@ -54,12 +54,11 @@ SECTION ALLOCATION MAP
  output                                  attributes/
 section   page    origin      length       input sections
 --------  ----  ----------  ----------   ----------------
-.text      0    00000000    00000194     
-                  00000000    00000158     pru0.obj (.text:main)
-                  00000158    00000018     pru0.obj (.text:init)
-                  00000170    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
-                  00000184    00000008                     : exit.obj (.text:abort)
-                  0000018c    00000008                     : exit.obj (.text:loader_exit)
+.text      0    00000000    00000220     
+                  00000000    000001fc     pru0.obj (.text:main)
+                  000001fc    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
+                  00000210    00000008                     : exit.obj (.text:abort)
+                  00000218    00000008                     : exit.obj (.text:loader_exit)
 
 .stack     1    00000000    00000100     UNINITIALIZED
                   00000000    00000004     rtspruv2_le.lib : boot.obj (.stack)
@@ -80,19 +79,6 @@ section   page    origin      length       input sections
 .creg.PRU_INTC.far 
 *          1    00021504    00000000     UNINITIALIZED
 
-.creg.PRU_CFG.noload.near 
-*          1    00026000    00000044     NOLOAD SECTION
-                  00026000    00000044     pru0.obj (.creg.PRU_CFG.noload.near)
-
-.creg.PRU_CFG.near 
-*          1    00026044    00000000     UNINITIALIZED
-
-.creg.PRU_CFG.noload.far 
-*          1    00026044    00000000     NOLOAD SECTION
-
-.creg.PRU_CFG.far 
-*          1    00026044    00000000     UNINITIALIZED
-
 
 SEGMENT ATTRIBUTES
 
@@ -105,8 +91,7 @@ GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name
 
 address    name
 --------   ----
-0000018c   C$$EXIT
-00026000   CT_CFG
+00000218   C$$EXIT
 00020000   CT_INTC
 481cc000   __PRU_CREG_BASE_DCAN0
 481d0000   __PRU_CREG_BASE_DCAN1
@@ -180,11 +165,10 @@ address    name
 00000001   __TI_exit
 ffffffff   __binit__
 ffffffff   __c_args__
-00000170   _c_int00_noinit_noargs_noexit
+000001fc   _c_int00_noinit_noargs_noexit
 00000000   _stack
-00000184   abort
+00000210   abort
 ffffffff   binit
-00000158   init
 00000000   main
 
 
@@ -233,15 +217,13 @@ address    name
 0000001f   __PRU_CREG_DDR
 00000100   __TI_STACK_END
 00000100   __TI_STACK_SIZE
-00000158   init
-00000170   _c_int00_noinit_noargs_noexit
-00000184   abort
-0000018c   C$$EXIT
+000001fc   _c_int00_noinit_noargs_noexit
+00000210   abort
+00000218   C$$EXIT
 00002000   __PRU_CREG_BASE_PRU_DMEM_1_0
 00010000   __PRU_CREG_BASE_PRU_SHAREDMEM
 00020000   CT_INTC
 00020000   __PRU_CREG_BASE_PRU_INTC
-00026000   CT_CFG
 00026000   __PRU_CREG_BASE_PRU_CFG
 00028000   __PRU_CREG_BASE_PRU_UART
 0002e000   __PRU_CREG_BASE_PRU_IEP
@@ -274,4 +256,4 @@ ffffffff   __binit__
 ffffffff   __c_args__
 ffffffff   binit
 
-[81 symbols]
+[79 symbols]
