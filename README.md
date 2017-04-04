@@ -1,4 +1,4 @@
-# README: pruMotorLib #
+# README: pru-MotorLib #
 
 This is a readme for the PRU-MotorLib. Hopefully at some point there will be some useful information here at some point.
 
