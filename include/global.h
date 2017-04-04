@@ -1,4 +1,0 @@
-//
-// Define global varaibles
-//
-

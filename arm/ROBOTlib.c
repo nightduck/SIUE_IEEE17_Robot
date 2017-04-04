@@ -26,96 +26,134 @@
 
 #include "global.h"
 
-int PRUputs(char * str) {
-    printf("%s", str) ;
-    return 0 ;
-}
 
-// Routine to turn LED on board ON or OFF
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+// Routine to turn LED on PSoC board on or OFF
 // 0 is OFF and 1 is ON
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 void turnLED(int state) {
+/*
+    sprintf(UARTbuf, "L:%d\n", state) ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return ;
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to drive robot forward
 // Distance will be in tenths of an inch 
 // And so will velcity
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int fwd(float distance, float velocity) {
+/*
     int dist, vel ;
-    char str[80] ;
     dist = (int) (10.0 * distance + 0.5) ;
     vel = (int) (10.0 * velocity + 0.5) ;
-    sprintf(str, "f:%d:%d\n", dist, vel) ;
+    sprintf(UARTbuf, "f:%d:%d\n", dist, vel) ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ;
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to drive robot backward
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int bwd(float distance, float velocity) {
+/*
     int dist, vel ;
-    char str[80] ;
     dist = (int) (10.0 * distance + 0.5) ;
     vel = (int) (10.0 * velocity + 0.5) ;
-    sprintf(str, "b:%d:%d\n", dist, vel) ;
+    sprintf(UARTbuf, "b:%d:%d\n", dist, vel) ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ;
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to drive to make a right turn
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int right(void) {
-    char str[80] ;
-    sprintf(str, "r\n") ;
+/*
+    sprintf(UARTbuf, "r\n") ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ;    
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to drive to make a left turn
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int left(void) {
-    char str[80] ;
-    sprintf(str, "l\n") ; 
+/*
+    sprintf(UARTbuf, "l\n") ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ;    
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to spin robot in CW direction specified # of degrees
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int cw(float degrees, float velocity) {
+/*
     int  deg ;
     int  vel ;
-    char str[80] ;    
     deg = (int) (degrees + 0.5) ;
     vel = (int) (10.0 * velocity + 0.5) ;
-    sprintf(str, "c:%d:%d\n", deg, vel) ;
+    sprintf(UARTbuf, "c:%d:%d\n", deg, vel) ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ; 
-}      
-
+} 
+     
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to spin robot in CCW direction specified # of degrees
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int ccw(float degrees, float velocity) {
+/*
     int  deg ;
     int  vel ;
-    char str[80] ;
     deg = (int) (degrees + 0.5) ;
     vel = (int) (10.0 * velocity + 0.5) ;
-    sprintf(str, "C:%d:%d\n", deg, vel) ;
+    sprintf(UARTbuf, "C:%d:%d\n", deg, vel) ;
+    if (debugPrint) printf("%s", UARTbuf) ;
+    UARTputstr(uart, UARTbuf) ;
+    UARTgetstr(uart, UARTbuf) ;
+*/
     return 0 ; 
 }      
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to take a test drive
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int test_drive(void) {
+/*
     fwd(24.0, 6.0) ;
     right() ;
     fwd(24.0, 6.0) ;
     left() ;
     fwd(24.0, 6.0) ;
+*/
     return 0 ;
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to test the sonar unit
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int test_sonar() {
+/*
     unsigned int  range ;
 
 // Get range from srf02
@@ -125,12 +163,15 @@ int test_sonar() {
 // Print the range
 
    printf("\nRange ==> %d cm\n\n", range);
+*/
    return 0 ;
 }
 
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 // Routine to test the servo driver
-
+// ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 int test_servo(void) {
+/*
    int i ;
 
 // Reset the servo driver
@@ -148,6 +189,9 @@ int test_servo(void) {
        delay_ms(900) ;
        delay_ms(900) ;
     }
-    return 0 ;
+*/
+   return 0 ;
 }
+
+
 

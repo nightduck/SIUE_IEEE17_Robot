@@ -32,173 +32,9 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 
 //Local functions not used by outside world
 
-int checkOverlay(char *file);
 void initCMD(unsigned char cmd);
 
-//*************************************************
-//*            Device Tree Overlay                *
-//*************************************************
-int addOverlay(char *dtb, char *overname)
-{
-	char file[100];
 
-	sprintf(file,"/lib/firmware/%s",dtb);
-
-	printf("Check for dtbo file: ");
-	if(checkOverlay(file) == 0)
-	{
-		//check current directory for file
-		char temp[100];
-		sprintf(temp,"%s",dtb);
-
-		if((access(temp,F_OK)) < 0)
-		{
-			printf("The file isn't here either\n");
-			exit(1);
-		}
-		else
-		{
-			printf("Found file\n");
-			printf("Copying to correct folder\n");
-
-			FILE *f,*fnew;
-			long num;
-			char *fileread;
-			size_t result;
-
-			f = fopen(temp,"r");
-			if(f == NULL)
-			{
-				printf("temp failed to open\n");
-				exit(1);
-			}
-
-			fnew = fopen(file,"w");
-			if(fnew == NULL)
-			{
-				printf("file failed to open\n");
-				exit(1);
-			}
-
-			fseek(f,0,SEEK_END);
-			fseek(fnew,0,SEEK_SET);
-			num = ftell(f);
-			rewind(f);
-
-			fileread = (char*) malloc(sizeof(char)*num);
-			if(fileread == NULL)
-			{
-				printf("Memory error\n");
-				exit(1);
-			}
-
-			result = fread(fileread,1,num,f);
-			if(result != num)
-			{
-				printf("Error reading file\n");
-				exit(1);
-			}
-
-			fwrite(fileread,sizeof(char),sizeof(fileread),fnew);
-			fclose(f);
-			fclose(fnew);
-
-			//Now file should be there so double check
-			if(checkOverlay(file) == 0)
-			{
-				printf("This just isn't working\n");
-				exit(1);
-			}
-		}
-
-	}
-
-	//If you made it here then the dtbo file exists now we need to check
-	//if it is already applied or not, then add it if it isn't there, or
-	//if it is already applied then we did all of this for nothing
-	
-	FILE *over;
-	char ch[200] = {0};
-	const char *pch = &ch[0];
-	char *search;
-	int ch2 = 0;
-	int j;
-	//char strsearch[] = "uart";
-
-	over = fopen("/sys/devices/bone_capemgr.8/slots", "r");
-	if(over == NULL)
-	{
-		printf("File didn't open\n");
-		exit(1);
-	}
-
-	fseek(over,0,SEEK_SET);
-
-	while(ch2 != -1)
-	{
-		//find all the overlays
-		j = 0;
-		while(ch2 != '\n')
-		{
-			ch2 = fgetc(over);
-			if(ch2 == '\n')
-				break;
-			ch[j] = (char) ch2;
-			j++;
-		}
-
-		printf("%s\n",ch);
-
-		//now look for the specific overlay
-		search = strstr(pch,overname);
-		if(search == NULL)
-		{
-			printf("Search: Failed\n");
-		}
-		else
-		{
-			printf("Search: Found\n");
-			return 0;
-		}
-
-		ch2 = fgetc(over);
-
-	}
-
-	fclose(over);
-
-	//ok if you made it here then you search them all and it would
-	//appear that it isn't there, so it is now time to add it
-	char name[100];
-	sprintf(name, "%s",overname);
-
-	over = fopen("/sys/devices/bone_capemgr.8/slots", "w");
-	if(over == NULL) printf("File didn't open\n");
-	fseek(over,0,SEEK_SET);
-	fprintf(over,name);
-	fflush(over);
-	fclose(over);
-
-	printf("Overlay Added\n");	
-	return 0;
-}
-
-int checkOverlay(char *file)
-{
-	int found = 0;
-
-	if((access(file,F_OK)) < 0)
-	{
-		printf("Failed\n");
-		found = 0;
-	}
-	else
-	{
-		printf("Success\n");
-		found = 1;
-	}
-	return found;
-}
 
 //*************************************************
 //*                USR FUNCTIONS                  *
@@ -406,7 +242,7 @@ int initUART()
 	struct termios new;
 	int fd;
 
-	fd = open("/dev/ttyO4", O_RDWR | O_NOCTTY);
+	fd = open(TTY, O_RDWR | O_NOCTTY);
 	if(fd < 0)
 	{
 		printf("Port failed to open\n");
@@ -464,7 +300,7 @@ unsigned char rxUART(int uart)
 	return data;
 }
 
-int UARTputstr(int uart, char* buf)
+int UARTputstr(int uart,  char* buf)
 {
 
 	int i;
@@ -475,7 +311,7 @@ int UARTputstr(int uart, char* buf)
 	return 0;
 }
 
-int UARTgetstr(int uart, char* buf)
+int UARTgetstr(int uart,  char* buf)
 {
     int i ;
 

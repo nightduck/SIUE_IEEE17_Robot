@@ -4,14 +4,15 @@
 # List the C src code files for ARM
 
 ARM := ./arm
-C_FILES := $(ARM)/testMotor.c 
+C_FILES := $(ARM)/beaglebot.c 
 C_FILES += $(ARM)/mio.c
 C_FILES += $(ARM)/servo_driver.c
 C_FILES += $(ARM)/srf02.c
 C_FILES += $(ARM)/BBBlib.c
 C_FILES += $(ARM)/ROBOTlib.c
 C_FILES += $(ARM)/child.c
-C_FILES += $(ARM)/motorPRU.c
+C_FILES += $(ARM)/miscLib.c
+C_FILES += $(ARM)/PRUlib.c
 
 # List the assembler files for the PRUs
 
@@ -20,7 +21,7 @@ P_FILES := $(PRU)/pru1.p
 
 # List the dts files that need tBBo be compiles
 
-DTS_FILES := ./BB-PRUPID-MOTOR-00A0.dts
+DTS_FILES := ./dts/BB-PRUPID-MOTOR-00A0.dts
 
 
 # Start address for PRU C object
@@ -38,14 +39,6 @@ CC := $(CROSS_COMPILE)gcc
 # Linker
 LD := $(CROSS_COMPILE)gcc
 STRIP := $(CROSS_COMPILE)strip
-
-# Assembler
-
-#PASM := /usr/bin/pasm
-
-# Device tree overlay compiler
-
-#DTC := /usr/bin/dtc
 
 # Important to have hard option!
 

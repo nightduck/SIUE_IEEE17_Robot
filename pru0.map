@@ -1,10 +1,10 @@
 ******************************************************************************
                      PRU Linker Unix v2.0.0                    
 ******************************************************************************
->> Linked Tue May 24 21:10:32 2016
+>> Linked Sun Mar  1 20:58:17 2015
 
 OUTPUT FILE NAME:   <pru0.elf>
-ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 00000218
+ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 000008cc
 
 
 MEMORY CONFIGURATION
@@ -12,10 +12,10 @@ MEMORY CONFIGURATION
          name            origin    length      used     unused   attr    fill
 ----------------------  --------  ---------  --------  --------  ----  --------
 PAGE 0:
-  PRU_IMEM              00000000   00002000  0000023c  00001dc4  RWIX
+  PRU_IMEM              00000000   00002000  000008f4  0000170c  RWIX
 
 PAGE 1:
-  PRU_DMEM_0_1          00000000   00002000  00000100  00001f00  RWIX
+  PRU_DMEM_0_1          00000000   00002000  00000118  00001ee8  RWIX
   PRU_DMEM_1_0          00002000   00002000  00000000  00002000  RWIX
   PRU_SHAREDMEM         00010000   00003000  00000000  00003000  RWIX
   PRU_INTC              00020000   00001504  00001504  00000000  RWIX
@@ -54,15 +54,28 @@ SECTION ALLOCATION MAP
  output                                  attributes/
 section   page    origin      length       input sections
 --------  ----  ----------  ----------   ----------------
-.text      0    00000000    0000023c     
-                  00000000    00000218     pru0.obj (.text:main)
-                  00000218    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
-                  0000022c    00000008                     : exit.obj (.text:abort)
-                  00000234    00000008                     : exit.obj (.text:loader_exit)
+.text      0    00000000    000008f4     
+                  00000000    00000378     motorLib.obj (.text:move)
+                  00000378    000001e0     motorLib.obj (.text:PID)
+                  00000558    00000150     rtspruv2_le.lib : llmpy.obj (.text:__pruabi_mpyll)
+                  000006a8    000000b8     pru0.obj (.text:main)
+                  00000760    00000060     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lslll)
+                  000007c0    0000004c     motorLib.obj (.text:doCommand)
+                  0000080c    00000044     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lsrll)
+                  00000850    00000034     pru0Lib.obj (.text:initGPIO)
+                  00000884    00000024     rtspruv2_le.lib : mpyi.obj (.text:__pruabi_mpyi)
+                  000008a8    00000024     pru0.obj (.text:initPRU)
+                  000008cc    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
+                  000008e0    00000008                     : exit.obj (.text:abort)
+                  000008e8    00000008                     : exit.obj (.text:loader_exit)
+                  000008f0    00000004     motorLib.obj (.text:waitForInterrupt)
 
 .stack     1    00000000    00000100     UNINITIALIZED
                   00000000    00000004     rtspruv2_le.lib : boot.obj (.stack)
                   00000004    000000fc     --HOLE--
+
+.bss       1    00000100    00000018     UNINITIALIZED
+                  00000100    00000018     pru0.obj (.bss)
 
 .cinit     1    00000000    00000000     UNINITIALIZED
 
@@ -91,8 +104,9 @@ GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name
 
 address    name
 --------   ----
-00000234   C$$EXIT
+000008e8   C$$EXIT
 00020000   CT_INTC
+00000378   PID
 481cc000   __PRU_CREG_BASE_DCAN0
 481d0000   __PRU_CREG_BASE_DCAN1
 80000000   __PRU_CREG_BASE_DDR
@@ -165,11 +179,26 @@ address    name
 00000001   __TI_exit
 ffffffff   __binit__
 ffffffff   __c_args__
-00000218   _c_int00_noinit_noargs_noexit
+00000760   __pruabi_lslll
+0000080c   __pruabi_lsrll
+00000884   __pruabi_mpyi
+00000558   __pruabi_mpyll
+000008cc   _c_int00_noinit_noargs_noexit
 00000000   _stack
-0000022c   abort
+000008e0   abort
 ffffffff   binit
-00000000   main
+00000104   clrGPIO1_reg
+00000114   clrGPIO3_reg
+000007c0   doCommand
+00000850   initGPIO
+000008a8   initPRU
+000006a8   main
+00000100   mem
+00000000   move
+0000010c   readGPIO1_reg
+00000108   setGPIO1_reg
+00000110   setGPIO3_reg
+000008f0   waitForInterrupt
 
 
 GLOBAL SYMBOLS: SORTED BY Symbol Address 
@@ -179,7 +208,7 @@ address    name
 00000000   __PRU_CREG_BASE_PRU_DMEM_0_1
 00000000   __PRU_CREG_PRU_INTC
 00000000   _stack
-00000000   main
+00000000   move
 00000001   __PRU_CREG_DMTIMER2
 00000001   __TI_args_main
 00000001   __TI_auto_init
@@ -217,9 +246,25 @@ address    name
 0000001f   __PRU_CREG_DDR
 00000100   __TI_STACK_END
 00000100   __TI_STACK_SIZE
-00000218   _c_int00_noinit_noargs_noexit
-0000022c   abort
-00000234   C$$EXIT
+00000100   mem
+00000104   clrGPIO1_reg
+00000108   setGPIO1_reg
+0000010c   readGPIO1_reg
+00000110   setGPIO3_reg
+00000114   clrGPIO3_reg
+00000378   PID
+00000558   __pruabi_mpyll
+000006a8   main
+00000760   __pruabi_lslll
+000007c0   doCommand
+0000080c   __pruabi_lsrll
+00000850   initGPIO
+00000884   __pruabi_mpyi
+000008a8   initPRU
+000008cc   _c_int00_noinit_noargs_noexit
+000008e0   abort
+000008e8   C$$EXIT
+000008f0   waitForInterrupt
 00002000   __PRU_CREG_BASE_PRU_DMEM_1_0
 00010000   __PRU_CREG_BASE_PRU_SHAREDMEM
 00020000   CT_INTC
@@ -256,4 +301,4 @@ ffffffff   __binit__
 ffffffff   __c_args__
 ffffffff   binit
 
-[79 symbols]
+[95 symbols]

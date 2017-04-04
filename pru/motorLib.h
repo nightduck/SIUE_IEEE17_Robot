@@ -1,28 +1,63 @@
-typedef struct{
-    int32_t     currentCnt;
-    int32_t     pastCnt;
-    int32_t     setPoint
-    int32_t     currentV;
-    int32_t     pastV;
-    int32_t     e0;
-    int32_t     e1;
-    int32_t     e2;
-    int32_t     distance;
-    int32_t     targetDistance;
-    int32_t     PWMValue;
-    int32_t     iState;
-    int32_t     iMax;
-    int32_t     pGain;
-    int32_t     iGain;
-    int32_t     dGain;
-    int32_t     diameter;
-    int32_t     ticsPerInch;
-}   wheel_t;
+//
+// Function prototype declarations
+//
+//
+// Defines used by motorLib 
+//
+#define   FALSE   0
+#define   TRUE    1
 
-typedef struct{
-    wheel_t    M1;
-    wheel_t    M2;
-    wheel_t    M3;
-    wheel_t    M4;
-}   pid_sys;
+#define   M_RUN			 (1 << 8)
+#define   M_HARD_BRAKE   	 (1 << 9)
+#define   M_UPDATE		 (1 << 10)
+#define   M_HALT		 (1 << 11)
+
+// Wheel directions
+
+#define   CW      0
+#define   CCW     1
+
+// Brake types
+
+#define   COAST   0
+#define   HARD    1
+
+// Motor control for state register
+
+#define   M1_CW		(0x00000004)
+#define   M1_CCW	(0x00000008)
+#define   M2_CW		(0x00000010)
+#define   M2_CCW	(0x00000020)
+#define   M3_CW		(0x00000001)
+#define   M3_CCW	(0x00000002)
+#define   M4_CW		(0x00000040)
+#define   M4_CCW	(0x00000080)
+
+//
+// Here are codes for commands we can
+// give to our DC motor controller
+//
+
+#define   NOP       0
+#define   FWD       1
+#define   BWD       2
+#define   ROT       3
+// Functions for Mechanium Wheels
+
+
+void      haltPRU(void) ;
+void      hardBrake(void) ;
+void      coast(void) ;
+int32_t   PID(DCmotor_t *motor, int32_t enc) ;
+void      move(void) ;
+void      doCommand(int32_t  command_code) ;
+
+
+
+
+
+
+
+
+
 
