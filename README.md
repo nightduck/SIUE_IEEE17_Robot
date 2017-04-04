@@ -19,4 +19,8 @@ This is a readme for the PRU-MotorLib. Hopefully at some point there will be som
 
 ### Who do I talk to? ###
 
-* That sounds like an existential question
+* That sounds like you're trying to rope me into your project, and I'm
+  expensive. But helpful documentation can be found in Clayton Faber's thesis.
+  He created the original platform this one is based on.
+* Link is here: http://siue.edu/~gengel/bbbWebStuff/cfaber_thesis_best.pdf
+* Code is here: https://bitbucket.org/CCbread/pru-motorlib/
