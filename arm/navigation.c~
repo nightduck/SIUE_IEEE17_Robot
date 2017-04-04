@@ -1,0 +1,1837 @@
+/*
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include <math.h>
+#include <time.h>
+
+#include "navigation.h"
+#include "robotLib.h" //For movement
+#include "amg.h"
+#include "testGyro.h"
+#include "mem.h"
+#include "die.h"
+#include "libIO.h"
+#include "ir.h"
+#include "fix.h"
+
+extern shared_memory_t *shared_memory;
+extern int debug;
+extern GUIvars_t GUIvars;
+
+//Accumulated drift (rdrift is rotation). Fixed point, where 16LSB = 1degree(or in)
+short xAccumdrift = 0;
+short yAccumdrift = 0;
+//short rAccumdrift = 0;
+
+//Location on the board
+int x = 0;
+int y = 0;
+int r = 0; //0-fwd, 1-right, 2-bwd, 3-left
+
+//Updates distance and drift after movement
+//dist - number of square moves forward (or backward, if negative)
+//pdrift - the undesired additional movement forward
+//rdrift - the deviation from forward
+
+void debugInfo() {
+    printf("    xAccumdrift %hd\n    yAccumdrift %hd\n", xAccumdrift, yAccumdrift);
+}
+
+void updateLocation(int dist, short pdrift, short rdrift) {
+    //if (debug) printf("updateLocation\n  dist %d\n  pdrift %hd\n  rdrift %hd\n", dist, pdrift, rdrift);
+
+    //rAccumdrift += rdrift;
+    switch (r) {
+        case FORWARD: //If facing forward
+            //if (debug) printf("  forward\n");
+            y += dist;
+//            //This is now obsolete, since the robot does realtime drift correction
+//            if (!DRIVEBLIND) {
+//                yAccumdrift += pdrift;
+//                //xAccumdrift += tan(rdrift/FXDPT) * dist * 12;    //If rdrift is given in radians
+//                xAccumdrift += tan(rdrift / FXDPT * M_PI / 180) * dist * 12; //If rdrift is given in degrees
+//            }
+            break;
+        case RIGHT: //If facing right
+            //if (debug) printf("  right\n");
+            x += dist;
+//            if (!DRIVEBLIND) {
+//                xAccumdrift += pdrift;
+//                //yAccumdrift += tan(rdrift/FXDPT) * dist * 12;    //If rdrift is given in radians
+//                xAccumdrift += tan(rdrift / FXDPT * M_PI / 180) * dist * 12; //If rdrift is given in degrees
+//            }
+            break;
+        case BACKWARD: //If facing backwards
+            //if (debug) printf("  backward\n");
+            y -= dist;
+//            if (!DRIVEBLIND) {
+//                yAccumdrift -= pdrift;
+//                //xAccumdrift -= tan(rdrift/FXDPT) * dist * 12;    //If rdrift is given in radians
+//                xAccumdrift += tan(rdrift / FXDPT * M_PI / 180) * dist * 12; //If rdrift is given in degrees
+//            }
+            break;
+        case LEFT: //If facing left
+            //if (debug) printf("  left\n");
+            x -= dist;
+//            if (!DRIVEBLIND) {
+//                xAccumdrift -= pdrift;
+//                //yAccumdrift -= tan(rdrift/FXDPT) * dist * 12;    //If rdrift is given in radians
+//                xAccumdrift += tan(rdrift / FXDPT * M_PI / 180) * dist * 12; //If rdrift is given in degrees
+//            }
+            break;
+        default:
+            //ERROR
+            printf("Error-updateLocation: Rotation is invalid value\n");
+    }
+}
+
+//Moves forward 1 square
+
+int forward(int prev) {
+    if (debug) {
+        printf("Forward 1\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    //short pstart = getXDrift(); //From the accelerometer API
+
+    //    //DEBUGGING
+    //    if (debug) {
+    //        printf("Initial direction %hd\n", getOrientation);
+    //    }   
+
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(12 + offset - yAccumdrift, SPEED); //Move forward 9 inches in 2 seconds
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(12 + offset - xAccumdrift, SPEED); //Move right 9 inches in 2 seconds
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(12 + offset + yAccumdrift, SPEED); //Move backward 9 inches in 2 seconds
+            yAccumdrift = 0;
+            break;
+        case LEFT:
+            fwd(12 + offset + xAccumdrift, SPEED); //Move left 9 inches in 2 seconds
+            xAccumdrift = 0;
+    }
+
+    //short pdrift = getXDrift() - pstart;
+    short rdrift = (DRIVEBLIND) ? 0 : getOrientation() - defaultHeading - (r * FULL_ROT / 4);
+
+    if (debug) printf("    rdrift %hd\n", rdrift);
+
+    //Calculate drift.
+    updateLocation(1, 0, rdrift);
+    return 0x11;
+}
+
+//Moves forward 2 square
+
+int forward2(int prev) {
+    if (debug) {
+        printf("Forward 2\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    //TODO: change rdrift to match forward()'s version
+    short rdrift = getOrientation();
+    //fwd(24+FWD_OFFSET,SPEED); //Move forward 9 inches in 2 seconds
+
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(24 + offset - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(24 + offset - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(24 + offset + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            fwd(24 + offset + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    //Calculate drift
+    updateLocation(2, 0, rdrift);
+    return 0x12;
+}
+
+//Moves forward 3 square
+
+int forward3(int prev) {
+    if (debug) {
+        printf("Forward 3\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    short rdrift = getOrientation();
+    //fwd(36+FWD_OFFSET,SPEED); //Move forward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(36 + offset - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(36 + offset - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(36 + offset + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            fwd(36 + offset + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    //Calculate drift.
+    updateLocation(3, 0, 0);
+    return 0x13;
+}
+
+//Moves forward 4 square
+
+int forward4(int prev) {
+    if (debug) {
+        printf("Forward 4\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    short rdrift = getOrientation();
+    //fwd(48+FWD_OFFSET,SPEED); //Move forward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(48 + offset - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(48 + offset - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(48 + offset + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            fwd(48 + offset + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(4, 0, 0);
+    //Calculate drift.
+    return 0x14;
+}
+
+//Moves forward 5 square
+
+int forward5(int prev) {
+    if (debug) {
+        printf("Forward 5\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    short rdrift = getOrientation();
+    //fwd(60+FWD_OFFSET,SPEED); //Move forward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(60 + offset - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(60 + offset - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(60 + offset + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            //TODO: Get rid of conditional statments
+            fwd(60 + offset + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(5, 0, 0);
+    //Calculate drift.
+    return 0x15;
+}
+
+//Moves forward 6 square
+
+int forward6(int prev) {
+    if (debug) {
+        printf("Forward 6\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+    printf("Rotation corrected\n");
+    float offset = 0;
+
+    if (prev == MOVE_RSWLEFT || prev == MOVE_RSWRIGHT) offset -= GUIvars.turnRad * 2;
+
+    short rdrift = getOrientation();
+    switch (r) {
+        case FORWARD: //If facing foward
+            fwd(72 + offset - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            fwd(72 + offset - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            fwd(72 + offset + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            fwd(72 + offset + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(6, 0, 0);
+    //Calculate drift.
+    return 0x16;
+}
+
+//Moves backward 1 square
+
+int backward(int prev) {
+    if (debug) {
+        printf("Backward 1\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    //bwd(12+BWD_OFFSET,SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(12 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(12 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(12 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(12 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-1, 0, 0);
+    //Calculate drift
+    return 0x21;
+}
+
+//Moves backward 2 square
+
+int backward2(int prev) {
+    if (debug) {
+        printf("Backward 2\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    bwd(24 + BWD_OFFSET, SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(24 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(24 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(24 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(24 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-2, 0, 0);
+    //Calculate drift
+    return 0x22;
+}
+
+//Moves backward 3 square
+
+int backward3(int prev) {
+    if (debug) {
+        printf("Backward 3\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    //bwd(36+BWD_OFFSET,SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(36 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(36 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(36 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(36 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-3, 0, 0);
+    //Calculate drift
+    return 0x23;
+}
+
+//Moves backward 4 square
+
+int backward4(int prev) {
+    if (debug) {
+        printf("Backward 4\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    //bwd(48+BWD_OFFSET,SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(48 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(48 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(48 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(48 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-4, 0, 0);
+    //Calculate drift
+    return 0x24;
+}
+
+//Moves backward 5 square
+
+int backward5(int prev) {
+    if (debug) {
+        printf("Backward 5\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    //bwd(60+BWD_OFFSET,SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(60 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(60 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(60 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(60 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-5, 0, 0);
+    //Calculate drift
+    return 0x25;
+}
+
+//Moves backward 6 square
+
+int backward6(int prev) {
+    if (debug) {
+        printf("Backward 6\n");
+        debugInfo();
+    }
+
+    if (!DRIVEBLIND) correctRotation();
+
+    short rdrift = getOrientation();
+    bwd(72 + BWD_OFFSET, SPEED); //Move backward 9 inches in 2 seconds
+    switch (r) {
+        case FORWARD: //If facing foward
+            bwd(72 + yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case RIGHT: //If facing right
+            bwd(72 + xAccumdrift, SPEED);
+            xAccumdrift = 0;
+            break;
+        case BACKWARD: //If facing backward
+            bwd(72 - yAccumdrift, SPEED);
+            yAccumdrift = 0;
+            break;
+        case LEFT: //If facing backward
+            bwd(72 - xAccumdrift, SPEED);
+            xAccumdrift = 0;
+    }
+
+    rdrift = (DRIVEBLIND) ? 0 : getOrientation() - rdrift;
+
+    updateLocation(-6, 0, 0);
+    //Calculate drift
+    return 0x26;
+}
+
+//Rotates left 90 degrees, turning wheels opposite directions
+
+int rotLeft(int prev) {
+    if (debug) {
+        printf("Rotate left\n");
+        debugInfo();
+    }
+
+    short rdrift = (DRIVEBLIND) ? 0 : (getOrientation() - defaultHeading) - (r * FULL_ROT / 4);
+
+    if (debug) {
+        printf("    rdrift %hd\n", rdrift);
+        printf("    defaultHeading %hd\n", defaultHeading);
+        printf("    angle to rotate %f\n", ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT);
+    }
+
+    r = (r + 3) % 4; //Set new value for r
+    /*
+            direction currently facing: getOrientation() - defaultHeading
+            direction desired to face:  r * FULL_ROT/4			can be 0, 1440, 2880, 4320
+
+            current		0	1440	2880	4320
+            0		0	4320	2880	1400
+            1000		100	5320	3880	2400
+            1440		1400	0	4320	2880
+            360 + current - wanted
+     */
+
+
+    rotate(((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT - LEFT_TURN_OFFSET, SPEED, CCW); //Rotate, adjusting for offset
+    //Also offset specifically for left turn
+    //Math: 1) 90 degrees plus drift (plus 360 for modding purposes)
+    //      2) Mod it so it's between 0 and 360
+    //      3) Convert fixed point to floating point by dividing by FXDPT (16.0)
+    //rotate(90, SPEED, CCW);
+
+    //POTENTIAL BUG: value returned from getOrientation doesn't overflow neatly
+
+
+    return MOVE_RLEFT;
+}
+
+//Rotates right 90 degrees, turning wheels opposite directions
+
+int rotRight(int prev) {
+    if (debug) {
+        printf("Rotate right\n");
+        debugInfo();
+    }
+
+    short rdrift = (DRIVEBLIND) ? 0 : (r * FULL_ROT / 4) - (getOrientation() - defaultHeading);
+
+    if (debug) {
+        printf("    rdrift %hd\n", rdrift);
+        printf("    defaultHeading %hd\n", defaultHeading);
+        printf("    angle to rotate %f\n", ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT);
+    } 
+
+    r = (r + 1) % 4; //Set new value for r
+
+    rotate(((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT, SPEED, CW); //Rotate, adjusting for offset
+    //rotate(90, SPEED, CW);
+
+    return MOVE_RRIGHT;
+}
+
+//Rotates left 90 degrees, using just the right wheel
+
+int rotLeftSingleWheel(int prev) {
+    if (debug) {
+        printf("Rotate left single wheel\n");
+        debugInfo();
+    }
+
+    short rdrift = (DRIVEBLIND) ? 0 : (getOrientation() - defaultHeading) - (r * FULL_ROT / 4);
+
+    if (debug) {
+        printf("    rdrift %hd\n", rdrift);
+        printf("    defaultHeading %hd\n", defaultHeading);
+        printf("    angle to rotate %f\n", ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT);
+    }
+
+    r = (r + 3) % 4; //Set new value for r
+    /*
+            direction currently facing: getOrientation() - defaultHeading
+            direction desired to face:  r * FULL_ROT/4			can be 0, 1440, 2880, 4320
+
+            current		0	1440	2880	4320
+            0		0	4320	2880	1400
+            1000		100	5320	3880	2400
+            1440		1400	0	4320	2880
+            360 + current - wanted
+     */
+
+
+    rotate(SINGLE_WHEEL_MULTIPLIER * ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT, SPEED, SCCW); //Rotate, adjusting for offset
+    //Math: 1) 90 degrees plus drift (plus 360 for modding purposes)
+    //      2) Mod it so it's between 0 and 360
+    //      3) Convert fixed point to floating point by dividing by FXDPT (16.0)
+    //rotate(90, SPEED, CCW);
+
+    //POTENTIAL BUG: value returned from getOrientation doesn't overflow neatly
+
+    return MOVE_RSWLEFT;
+}
+
+//Rotates right 90 degrees, using just the left wheel
+
+int rotRightSingleWheel(int prev) {
+    if (debug) {
+        printf("Rotate right single wheel\n");
+        debugInfo();
+    }
+
+    short rdrift = (DRIVEBLIND) ? 0 : (r * FULL_ROT / 4) - (getOrientation() - defaultHeading);
+
+    if (debug) {
+        printf("    rdrift %hd\n", rdrift);
+        printf("    defaultHeading %hd\n", defaultHeading);
+        printf("    angle to rotate %f\n", ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT);
+    }
+
+    r = (r + 1) % 4; //Set new value for r
+
+    rotate(SINGLE_WHEEL_MULTIPLIER * ((FULL_ROT + rdrift + (FULL_ROT / 4)) % FULL_ROT) / FXDPT, SPEED, SCW); //Rotate, adjusting for offset
+    //rotate(90, 9, CW);
+
+    //Calculate drift
+    return MOVE_RSWRIGHT;
+}
+
+//Rotates left and moves forward in an arch by rotating both wheels
+
+int leftFwd(int prev) {
+    return MOVE_RFLEFT;
+}
+
+//Rotates right and moves forward in an arch by rotating both wheels
+
+int rightFwd(int prev) {
+    return MOVE_RFRIGHT;
+}
+
+//Rotates 180 degrees
+
+int uturn(int prev) { //TODO: Verify this is working
+    if (debug) {
+        printf("U-Turn\n");
+        debugInfo();
+    }
+
+    short rdrift = (DRIVEBLIND) ? 0 : (getOrientation() - defaultHeading) - (r * FULL_ROT / 4);
+
+    if (debug) {
+        printf("    r %d\n", r);
+        printf("    rdrift %hd\n", rdrift);
+        printf("    defaultHeading %hd\n", defaultHeading);
+    }
+
+    r = (r + 2) % 4;
+    rotate(((FULL_ROT + rdrift + (FULL_ROT / 2)) % FULL_ROT) / FXDPT, 9, CCW); //CCW, bc robot is better at left turns
+    //rotate(180, SPEED, CCW);
+
+    //Calculate drift
+    return MOVE_UTURN;
+}
+
+//Brake
+
+int brake(int prev) {
+    applyBrake();
+    return -1;
+}
+
+int endPath(int prev) {
+    return 0;
+}
+
+void correctRotation() {
+    float drift = (getOrientation() - ((defaultHeading + (r * FULL_ROT / 4)) % FULL_ROT)) / 16.0;
+    if (debug) {
+        printf("Correct rotation\n");
+        printf("defaultHeading: %d\n", defaultHeading);
+        printf("r: %d\n", r);	
+        printf("drift %f\n", drift);
+    }
+    if (drift < 0) rotate(-1 * drift, SPEED, CW);
+    else if (drift > 0) rotate(drift, SPEED, CCW);
+
+    //If we're not blocking (and we actually moved), then block here
+    if(!BLOCK && drift != 0) {	
+        waitForComplete();
+        shared_memory->command.code = NOP ;
+        shared_memory->command.status = IDLE ;
+        shared_memory->state = 0 ;
+    }
+
+    //TODO: If you want to implement rotation thresholds, here is the place to do it
+}
+
+int valid(char data) {
+    //Return false if the square is undefined or an obstacle
+    return (!(data & OBSTACLE) && !((data & UNDEFINED) && !(data & MUST_EXPLORE)));
+}
+
+char * getDirection(char dir) {
+    switch (dir) {
+        case 0:
+            return "FORWARD";
+            break;
+        case 1:
+            return "RIGHT";
+            break;
+        case 2:
+            return "BACKWARD";
+            break;
+        case 3:
+            return "LEFT";
+            break;
+        default:
+            return "err";
+    }
+}
+
+void dieReadingSequence() {
+    fwd(8, SPEED);
+    waitForComplete();
+
+    if(!BLOCK) {
+        waitForComplete();
+        shared_memory->command.code = NOP ;
+        shared_memory->command.status = IDLE ;
+        shared_memory->state = 0 ;
+    }
+    correctRotation();
+    
+    delay_ms(250);
+    liftLid();
+    delay_ms(250);
+    
+    bwd(2, SPEED);
+    
+    if(!BLOCK) {
+        waitForComplete();
+        shared_memory->command.code = NOP ;
+        shared_memory->command.status = IDLE ;
+        shared_memory->state = 0 ;
+    }
+    correctRotation();
+    
+    int count = dieCount();
+
+    if(count == 0) {
+        //count = random number
+        srand(time(NULL));
+        count = (rand() % 6) + 1;
+    }
+ 
+    DPD(count+48);
+
+
+    bwd(5.5, SPEED);
+    
+    if(!BLOCK) {
+        waitForComplete();
+        shared_memory->command.code = NOP ;
+        shared_memory->command.status = IDLE ;
+        shared_memory->state = 0 ;
+    }
+    correctRotation();
+}
+
+//Returns true if there is a main tunnel connecting (i,j) and (k,l)
+//Returns false if depth equals 0. pi and pj are the coordinates of
+//i and j in the calling fn.
+int completeTunnel(char board[7][7], int i, int j, int k, int l, int pi, int pj, int depth) {
+    if (depth == 0 || !(board[i][j] & MAIN_TUNNEL)) return 0;
+    else if (i == k && j == l) return 1;
+    else if (i < 6 && i+1 != pi && completeTunnel(board, i+1, j, k, l, i, j, depth-1)) return 1;
+    else if (i > 0 && i-1 != pi && completeTunnel(board, i-1, j, k, l, i, j, depth-1)) return 1;
+    else if (j < 6 && j+1 != pj && completeTunnel(board, i, j+1, k, l, i, j, depth-1)) return 1;
+    else if (j > 0 && j-1 != pj && completeTunnel(board, i, j-1, k, l, i, j, depth-1)) return 1;
+    else return 0;
+}
+
+void tunnelGapFill(char board[7][7]) {
+    char cand[49][2];	//List of coordinate tuples of possible locations for tunnels
+    char endPoints[2][2];   //Coordinates of end points
+    int tunnelComplete = 0;
+    int i, j;
+    int e = 0;
+    int count = 0;
+
+    //Find endPoints
+    for(i = 0; i < 7; i++) {
+        if (board[i][0] & MAIN_TUNNEL) {
+            endPoints[e][0] = i;
+            endPoints[e][1] = 0;
+            e++;
+        }
+        if(e > 1) break;
+        if (board[i][6] & MAIN_TUNNEL) {
+            endPoints[e][0] = i;
+            endPoints[e][1] = 6;
+            e++;
+        }
+        if(e > 1) break;
+    }
+    for(j = 0; j < 7; j++) {
+        if (board[0][j] & MAIN_TUNNEL) {
+            endPoints[e][0] = 0;
+            endPoints[e][1] = j;
+            e++;
+        }
+        if(e > 1) break;
+        if (board[6][j] & MAIN_TUNNEL) {
+            endPoints[e][0] = 6;
+            endPoints[e][1] = j;
+            e++;
+        }
+        if(e > 1) break;
+    }
+}
+
+void travelPath(char board[7][7], fp* path, char row, char col, char orient) {
+    //TODO: Add code here to modify path based on board
+    if(debug) printf("Traveling\n");
+    int i, v;
+    i = v = 0;
+    do {
+        v = path[i++](v);			//Perform movement
+        if (v) observe(board, y, x, r, v);	//Take observations (if non blocked, this will execute while in motion)
+						//Here, y,x,&r are the coordinates after movement
+        
+        row = y;				//Update coordinates
+        col = x;
+        orient = r;
+    } while (v);
+}
+
+fp * shortestPath(char board[7][7], fp *fnList, char startRow, char startCol, char startOrient, char endRow, char endCol, char endOrient) {
+    struct square cube[7][7][4]; //Each plane of the cube corresponds to a different orientation
+    //but is otherwise identical to board
+    if(debug) printf("Shortest path (%d, %d, %d) -> (%d, %d, %d)\n", startRow, startCol, startOrient, endRow, endCol, endOrient);
+
+    //Return NULL if the square is impossible to reach
+    if(board[endRow][endCol] & OBSTACLE) return NULL;
+    
+    //Return NULL is path length is zero
+    if((startRow == endRow) && (startCol == endCol) && (startOrient == endOrient)) return NULL;
+
+    //TODO: Return NULL if the square is impossible to reach through more complicated means
+
+    //Initialize node values
+    int i = 0;
+    int j = 0;
+    int k = 0;
+    for (i = 0; i < 7; i++) {
+        for (j = 0; j < 7; j++) {
+            for (k = 0; k < 4; k++) {
+                cube[i][j][k].data = board[i][j];
+                cube[i][j][k].dist = 255;
+                cube[i][j][k].row = i;
+                cube[i][j][k].col = j;
+                cube[i][j][k].orient = k;
+                cube[i][j][k].parent = NULL;
+                cube[i][j][k].next = NULL;
+            }
+        }
+    }
+    
+    //Exists so the square will be visited even if it's UNDEFINED
+    for(i = 0; i < 4; i++)
+        cube[endRow][endCol][i].data ^= MUST_EXPLORE;
+
+    //Initialize root node
+    cube[startRow][startCol][startOrient].dist = 0;
+
+    struct square **queue = malloc(196 * sizeof (struct square*)); //Create queue big enough to traverse each square
+    struct square thing;
+    queue[0] = &thing;
+    queue[0] = &cube[startRow][startCol][startOrient]; //Add root node to the queue
+    int queueIndex = 0; //Next index to read
+    int queueEnd = 1; //First empty index
+
+    //BFS
+    struct square *current;
+    while (queueIndex < queueEnd) {
+        current = queue[queueIndex];
+        queueIndex++;
+
+        //DEBUGGING
+        //printf("current = (%d,%d,%s)\n", (int) current->row, (int) current->col,
+        //    getDirection(current->orient));
+
+        //Find lateral movements
+        struct square *node;
+        switch (current->orient) {
+            case FORWARD: //Facing forward
+                //If not on the last row, add option to move forward
+                node = &cube[current->row + 1][current->col][current->orient];
+                if (current->row < 6 && valid(node->data) && current->dist + 1 < node->dist) {
+                    //DEBUGGING
+                    //printf("       (%d, %d, %s) added\n", (int) node->row, (int) node->col, getDirection(node->orient));
+                    node->dist = current->dist + 1;
+                    node->parent = current;
+                    queue[queueEnd] = node;
+                    queueEnd++;
+                }
+                break;
+            case LEFT: //Facing left
+                //If not on the first column, add option to move absolute left
+                node = &cube[current->row][current->col - 1][current->orient];
+                if (current->col > 0 && valid(node->data) && current->dist + 1 < node->dist) {
+                    //DEBUGGING
+                    //printf("       (%d, %d, %s) added\n", (int) node->row, (int) node->col, getDirection(node->orient));
+                    node->dist = current->dist + 1;
+                    node->parent = current;
+                    queue[queueEnd] = node;
+                    queueEnd++;
+                }
+                break;
+            case BACKWARD: //Facing backward
+                //If not on the first row, add option to move backward
+                node = &cube[current->row - 1][current->col][current->orient];
+                if (current->row > 0 && valid(node->data) && current->dist + 1 < node->dist) {
+                    //DEBUGGING
+                    //printf("       (%d, %d, %s) added\n", (int) node->row, (int) node->col, getDirection(node->orient));
+                    node->dist = current->dist + 1;
+                    node->parent = current;
+                    queue[queueEnd] = node;
+                    queueEnd++;
+                }
+                break;
+            case RIGHT: //Facing right
+                //If not on the first column, add option to move right
+                node = &cube[current->row][current->col + 1][current->orient];
+                if (current->col < 6 && valid(node->data) && current->dist + 1 < node->dist) {
+                    //DEBUGGING
+                    //printf("       (%d, %d, %s) added\n", (int) node->row, (int) node->col, getDirection(node->orient));
+                    node->dist = current->dist + 1;
+                    node->parent = current;
+                    queue[queueEnd] = node;
+                    queueEnd++;
+                }
+                break;
+            default:
+                printf("Error, invalid orientation!");
+        }
+
+        //Find possible rotations
+        for (i = ((current->orient + 1) & 0x3); i != current->orient; i = ((i + 1) & 0x03)) {
+            struct square *node = &cube[current->row][current->col][i];
+            if (current->dist + 1 < node->dist) {
+                //DEBUGGING
+                //printf("       (%d, %d, %s) added\n", (int) node->row, (int) node->col, getDirection(node->orient));
+                node->dist = current->dist + 1;
+                node->parent = current;
+                queue[queueEnd] = node;
+                queueEnd++;
+            }
+        }
+    }
+
+    //Trace out shortest path
+    current = &cube[endRow][endCol][endOrient];
+    while (current->parent != NULL) {
+        if(debug) {
+            printf("(%d,%d,%s)<-(%d,%d,%s)\n",(int)current->row, (int)current->col, getDirection(current->orient),
+                  (int)current->parent->row, (int)current->parent->col, getDirection(current->parent->orient));
+        }
+        current->parent->next = current;
+        current = current->parent;
+    }
+
+    //Compile functions for path
+    int index = 0; //Next index to fill in fnList
+    int total = 0; //Total distance traveled in straight line. Increments to
+                   //accumulate a forward direction, decrements to track a backwards one
+    while (current->next != NULL) {
+        if (current->orient != current->next->orient) {
+            //Resolve total, which has been accumulating up until now
+            if (total != 0) {
+                //Add backwards or forwards movement to fnList
+                switch (total) {
+                    case 6:
+                        fnList[index] = forward6;
+                        break;
+                    case 5:
+                        fnList[index] = forward5;
+                        break;
+                    case 4:
+                        fnList[index] = forward4;
+                        break;
+                    case 3:
+                        fnList[index] = forward3;
+                        break;
+                    case 2:
+                        fnList[index] = forward2;
+                        break;
+                    case 1:
+                        fnList[index] = forward;
+                        break;
+                    case -1:
+                        fnList[index] = backward;
+                        break;
+                    case -2:
+                        fnList[index] = backward2;
+                        break;
+                    case -3:
+                        fnList[index] = backward3;
+                        break;
+                    case -4:
+                        fnList[index] = backward4;
+                        break;
+                    case -5:
+                        fnList[index] = backward5;
+                        break;
+                    case -6:
+                        fnList[index] = backward6;
+                        break;
+                }
+                index++;
+                total = 0;
+            }
+            //Handle rotation
+            unsigned char rotation = current->next->orient - current->orient;
+            switch (rotation & 0x3) {
+                case LEFT:
+                    fnList[index] = rotLeft;
+                    break;
+                case BACKWARD:
+                    fnList[index] = uturn;
+                    break;
+                case RIGHT:
+                    fnList[index] = rotRight;
+                    break;
+                default:
+                    printf("invalid rotation: (%hhx,%hhx,%s)--%hhx->(%hhx,%hhx,%s)\n",
+                            current->row, current->col, getDirection(current->orient),
+                            rotation, current->next->row,
+                            current->next->col, getDirection(current->next->orient));
+            }
+            index++;
+        } else if ((current->orient == FORWARD && current->row < current->next->row)
+                || (current->orient == LEFT && current->col > current->next->col)
+                || (current->orient == BACKWARD && current->row > current->next->row)
+                || (current->orient == RIGHT && current->col < current->next->col)) {
+            total++; //Move forward
+        } else if ((current->orient == FORWARD && current->row > current->next->row)
+                || (current->orient == LEFT && current->col < current->next->col)
+                || (current->orient == BACKWARD && current->row < current->next->row)
+                || (current->orient == RIGHT && current->col > current->next->col)) {
+            total--; //Move backward
+        } else {
+            printf("6958: wut\n");
+        }
+
+        //DEBUGGING
+        //        printf("(%d,%d,%s)->\n", (int) current->row, (int) current->col, getDirection(current->orient));
+        current = current->next;
+    }
+    if (total != 0) {
+        //Add backwards or forwards movement to fnList
+        switch (total) {
+            case 6:
+                fnList[index] = forward6;
+                break;
+            case 5:
+                fnList[index] = forward5;
+                break;
+            case 4:
+                fnList[index] = forward4;
+                break;
+            case 3:
+                fnList[index] = forward3;
+                break;
+            case 2:
+                fnList[index] = forward2;
+                break;
+            case 1:
+                fnList[index] = forward;
+                break;
+            case -1:
+                fnList[index] = backward;
+                break;
+            case -2:
+                fnList[index] = backward2;
+                break;
+            case -3:
+                fnList[index] = backward3;
+                break;
+            case -4:
+                fnList[index] = backward4;
+                break;
+            case -5:
+                fnList[index] = backward5;
+                break;
+            case -6:
+                fnList[index] = backward6;
+                break;
+        }
+        index++;
+        total = 0;
+    }
+
+    for(i = 0; i < 4; i++)
+        cube[endRow][endCol][i].data ^= MUST_EXPLORE;	//Turn the bit off
+
+    fnList[index] = endPath;
+    return fnList;
+}
+
+void observe(char board[7][7], char row, char col, char orient, int move) {
+    //Row, col and orient are the coordinate after movement. So if this is being called
+    //while in motion, they belong to the destination square. If it's being called after
+    //movement, they are representative of present conditions
+
+    if (debug) printf("Observe (%d,%d): 0x%02x\n", (int)row, (int)col, move);
+
+    //TODO: declare int boardVotes[7][7][3] in runRound and pass it to here. boardVotes keeps tally of 
+    //obstacle measurements (boardVotes[x][y][0]), main tunnel measurements (boardVotes[x][y][1]), and
+    //bonus tunnel measurements (boardVotes[x][y][2])
+    //TODO: When this is implemented, go through at the end of observe, tally the votes, and change the board
+    //appropriately
+
+    int xblock;		//The starting column
+    int yblock;		//The starting row
+    float xoffset;	//The x offset in inches on the board (0 to 84)
+    float yoffset;	//The y offset in inches on the board (0 to 84)
+    float ticsPerInch = GUIvars.ticsPerRev / (GUIvars.wheelDiam * PI);
+    shared_memory->setpointPID.sp = 0;	//Reset setpoint
+
+    while(query(STATUS) != ACTIVE) delay_ms(10); 
+    int prevTics = (shared_memory->motor[M1].distance + shared_memory->motor[M2].distance) / 2;
+    float prevDist = 0;
+  
+    //Initialize block and offsets  
+    if((move & MOVE_FWD) || (move & MOVE_BWD)) {
+        switch(orient) {
+            case FORWARD:
+                xblock = col;
+                yblock = row - ((move & MOVE_FWD) ? (move & 0xF) : -1*(move & 0xF));
+                break;
+            case LEFT:
+                xblock = col + ((move & MOVE_FWD) ? (move & 0xF) : -1*(move & 0xF));
+                yblock = row;
+                break;
+            case BACKWARD:
+                xblock = col;
+                yblock = row + ((move & MOVE_FWD) ? (move & 0xF) : -1*(move & 0xF));
+                break;
+            case RIGHT:
+                xblock = col - ((move & MOVE_FWD) ? (move & 0xF) : -1*(move & 0xF));
+                yblock = row;
+                break;
+        }
+    } else if (move & MOVE_ROTATE) {
+        xblock = col;
+        yblock = row;
+    }
+    xoffset = xblock*12 + xAccumdrift + 6;
+    yoffset = yblock*12 + yAccumdrift + 6;
+
+    while(query(STATUS) != COMPLETED) {
+        //Read tics and calculate distance travelled (in cm)
+        int tics = (shared_memory->motor[M1].distance + shared_memory->motor[M2].distance) / 2;
+        float dist = tics / ticsPerInch;
+        
+        //Read acc and change setpoint if neccesary
+        //Also, offsets
+
+        if(!DRIVEBLIND) {
+
+            if(!(move & MOVE_ROTATE)) { 
+
+              //Read accelerometer and correct direction
+                int drift = (getOrientation() - ((defaultHeading + (r * FULL_ROT / 4)) % FULL_ROT));
+                if (drift > 0) shared_memory->setpointPID.sp = drift/-4 -1;
+                else if (drift < 0) shared_memory->setpointPID.sp = drift/-4 + 1;
+                else shared_memory->setpointPID.sp = 0; 
+//                shared_memory->setpointPID.sp = -1*drift; 
+
+              //Set block and offset values
+                switch(orient) {
+                    case FORWARD:
+                        yoffset = yblock*12 + yAccumdrift + 6 + dist;
+                      //Average the tic count for each motor and convert to cm
+                   
+                      // printf("m1/2: %d/%d, target: %d/%d, tics/cm: %f\n", shared_memory->motor[M1].distance, 
+                      //       shared_memory->motor[M2].distance, shared_memory->motor[M1].targetDistance, 
+                      //       shared_memory->motor[M2].targetDistance, ticsPerInch);
+
+                    
+                      //TODO: Calculate Accumdrifts . eg xAccumdrift += tan(drift in rad) * dist; xoffset = xAccumdrift;
+		      //			         yAccumdrift += dist - sqrt(pow(dist,2) - pow(xAccumdrift)); yoffset += dist - yAccumdrift
+                      //                                 Notice that Accumdrifts are in 16LSB fixed point. Accomodate or change that.
+                      //TODO: Add previous drift to average in use of calculating Accumdrifts
+		      //TODO: If Accumdrift passes a threshhold, turn to compensate. Do not correct course to increase an Accumdrift
+		      //TODO: To counteract an Accumdrift parallel to path of travel, increase/decrease motor[M1/2].targetDistance
+                        break;
+                    case LEFT:
+                        xoffset = xblock*12 + xAccumdrift + 6 - dist;
+                        break;
+                    case BACKWARD:
+                        yoffset = yblock*12 + yAccumdrift + 6 - dist;
+                        break;
+                    case RIGHT:
+                        xoffset = xblock*12 + xAccumdrift + 6 + dist;
+                        break;
+                }
+            }
+        }
+        //Use move, row, col, and orient to find original position
+        //Use numtics, ticsperinch, xAccumDrift, and yAcccumDrift to find absolute distance from that square
+        //Convert to an x/y coordinate (in blocks) and an x/y offset (in cms)
+
+        /*
+        switch(orient) {
+            case FORWARD:
+                //When perfectly centered on 0,0, these variables should be 0
+                int leftIR = yoffset - 3; 
+                int studfinder = yoffset - 8; 
+
+                if (leftIR % 12 > 1 && leftIR % 12 < 11) { //If within 1 inch margins
+                    float leftDist = getDist() + 3;
+		    /Place obstacle at (xoffset/12 + leftDist / 12, yoffset/12)
+                    //TODO: Use obstacle offset (leftDist % 12 - 6) to calculate Accumdrift
+                    //TODO: Take reading and apply to voting system
+                }
+
+                if(studfinder % 12 > 1 && leftIR % 12 < 11) {
+                    if (studfinder) board[yoffset/12][xoffset/12] |= MAIN_TUNNEL;    
+                    //TODO: Take reading and apply to voting system
+                }
+                break;
+            case LEFT:
+                break;
+            case BACKWARD:
+                break;
+            case RIGHT:
+                break; 
+        }
+        */
+
+        //if(yoffset > -5)
+        //If not on margin
+		//Read stud finder
+		//TODO: Read lower IR
+		//Modify board as appropriate
+
+        //If not in margins
+		//Read left ir
+		//use x/y coordinates and x/y offsets to find what square it belongs to
+             
+//        printf("Block (%d, %d) / Offset (%f, %f)\n", (int)(xoffset/12), (int)(yoffset/12), xoffset, yoffset); 
+        if(!pollStudFinder()) {
+            printf("Block (%d, %d) / Offset (%f, %f)\n", (int)(xoffset/12), (int)(yoffset/12), xoffset, yoffset); 
+            printf("   Stud finder ON\n");
+            board[(int)(yoffset/12)][(int)(xoffset/12)] = MAIN_TUNNEL;
+        }
+
+//        printf("   IR: %f\n\n", getDist(LEFTIR));
+
+        //Kill time
+        prevTics = tics;
+        prevDist = dist;
+        delay_ms(20);
+    }
+
+    shared_memory->command.code = NOP ;
+    shared_memory->command.status = IDLE ;
+    shared_memory->state = 0 ;
+
+//    //If not blocking robotLib movements, then this is being called mid-movement.
+//    //Monitor studfinder
+//    if(!BLOCK) {
+//        //The idea is to poll the stud finder every 1ms and keep an array of values
+//        //But the simpler implementation is to just keep an array of times the
+//        //count changed. changes[0] contains the initial value, and subsequent array
+//        //values contain the time the state changed. Array is null terminated
+//        char changes[100];
+//        int i=1, count=0, state=getPinValue(STUD_STATUS), nextState;
+//
+//        changes[i] = state;
+//
+//        while(query(STATUS) != IDLE && query(STATUS) != COMPLETED) {
+//            //Pause for a bit here
+//            delay_ms(10);
+//
+//            nextState = getPinValue(STUD_STATUS);	//Read stud finder
+//
+//            if(nextState != state) {			//Add new change, if needed
+//                changes[i] = count;
+//                i++;
+//            }
+//
+//            count++;					//Get ready for next round
+//            state = nextState;
+//        }
+//        changes[i] = 0;					//Null terminate array
+//
+//        //Analyze data
+//        if(state) {			//If last value is a 1, mark current square as main tunnel
+//
+//            count++;					//Get ready for next round
+//            state = nextState;
+//        }
+//        changes[i] = 0;					//Null terminate array
+//
+//        //Analyze data
+//        if(state) {			//If last value is a 1, mark current square as main tunnel
+//            board[row][col] |= MAIN_TUNNEL;
+//            board[row][col] &= ~UNDEFINED;      //Turn off undefined bit
+//            printf("    Main tunnel\n");	//DEBUGGING
+//        } else if (move == MOVE_FWD1 && (changes[0] || i > 1)) {	//If only moving forward 1 square,
+//	    board[row][col] |= MAIN_TUNNEL;			//then mark as main tunnel if there
+//            board[row][col] &= ~UNDEFINED;			//are any changes
+//	    printf("    Main tunnel\n");	//DEBUGGING
+//        }
+//        //if (/*Rotate movement and read a 1 from stud finder at some point*/) {
+//        //    board[row][col] |= MAIN_TUNNEL;
+//        //    printf("    Main tunnel\n");	//DEBUGGING
+//        //} 
+//   } else if (getPinValue(STUD_STATUS)) {	//If not blocked, take 1 reading of stud finder
+//       board[row][col] |= MAIN_TUNNEL;
+//       board[row][col] &= ~UNDEFINED;	//Turn off undefined bit
+//       printf("    Main tunnel\n");	//DEBUGGING
+//   }
+//
+//   //-----------At this point, the robot is guarenteed to not be moving---------------
+//
+//    if (getPinValue(STUD_STATUS)) {	//If not blocked, take 1 reading of stud finder
+//        board[row][col] |= MAIN_TUNNEL;
+//        board[row][col] &= ~UNDEFINED;	//Turn off undefined bit
+//        printf("    Main tunnel\n");	//DEBUGGING
+//    }
+//    //printBoard(board);
+//    //TODO: Uncomment appropriate lines when daughter board is connected
+//    
+//    //printf("Front: %f\n", getDist(FRONTIR));
+//    //printf("Left: %f\n", getDist(LEFTIR));
+//    //printf("Down: %f\n", getDist(DOWNIR));
+//     
+//    //Obstacle detection
+//    //TODO: Add positional offset and drifts to these calculations
+//    //Read left IR
+//    float leftDistcms = getDist(LEFTIR);
+//    int leftDist = (leftDistcms+7.5)/30;
+//    printf("   IR: %f - %d", leftDistcms, leftDist);
+//   
+//    //Read front IR
+//    //int frontDist = getDist(FRONTIR)/30;
+//   
+//    int i;
+//    if(leftDist < 4) {
+//        leftDist++;		//Increase leftDist, since right now adjacent square means leftDist=0
+//        switch(orient) {
+//            case FORWARD:
+//                for(i = 0; i < leftDist && col+i < 7; i++) {
+//                    board[row][col+i] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                if(col+leftDist < 7) {
+//                    board[row][col+leftDist] |= OBSTACLE;	//Flag as obstacle
+//                    board[row][col+leftDist] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row, col+leftDist);	//DEBUGGING
+//                }
+//                break;
+//            case LEFT:
+//                for(i = 0; i < leftDist && row-i >= 0; i++) {
+//                    board[row-i][col] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                if(row-leftDist >= 0) {
+//                    board[row-leftDist][col] |= OBSTACLE;	//Flag as obstacle
+//                    board[row-leftDist][col] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row-leftDist, col);	//DEBUGGING
+//                }
+//                break;
+//            case BACKWARD:
+//                for(i = 0; i < leftDist && col-i >= 0; i++) {
+//                    board[row][col-i] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                if(col-leftDist >= 0) {
+//                    board[row][col-leftDist] |= OBSTACLE;	//Flag as obstacle
+//                    board[row][col-leftDist] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row, col-leftDist);	//DEBUGGING
+//                }
+//                break;
+//            case RIGHT:
+//                for(i = 0; i < leftDist &&& row+i < 7; i++) {
+//                    board[row+i][col] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                if(row+leftDist < 7) {
+//                    board[row+leftDist][col] |= OBSTACLE;	//Flag as obstacle
+//                    board[row+leftDist][col] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row+leftDist, col);	//DEBUGGING
+//                }
+//                break;
+//        }
+//    } else {							//If no obstacle seen, mark next 4 squares as clear
+//        switch(orient) {
+//            case FORWARD:
+//                for(i = 0; i < 4 && col+i < 7; i++) {
+//                    board[row][col+i] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                break;
+//            case LEFT:
+//                for(i = 0; i < 4 && row-i >= 0; i++) {
+//                    board[row-i][col] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                break;
+//            case BACKWARD:
+//                for(i = 0; i < 4 && col-i >= 0; i++) {
+//                    board[row][col-i] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                break;
+//            case RIGHT:
+//                for(i = 0; i < 4 && row+i < 7; i++) {
+//                    board[row+i][col] &= ~UNDEFINED;		//Mark all squares between you and obstacle clean
+//                }
+//                break;
+//        }
+//    }
+// 
+
+//    if(frontDist < 4) {
+//        switch(orient) {
+//            case FORWARD:
+//                if(row+frontDist < 7) {
+//                    board[row+frontDist][col] |= OBSTACLE;	//Flag as obstacle
+//                    board[row+frontDist][col] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row+frontDist, col);	//DEBUGGING
+//                }
+//                break;
+//            case LEFT:
+//                if(col+frontDist < 7) {
+//                    board[row][col+frontDist] |= OBSTACLE;	//Flag as obstacle
+//                    board[row][col+frontDist] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row, col+frontDist);	//DEBUGGING
+//                }
+//                break;
+//            case BACKWARD:
+//                if(row-frontDist >= 0) {
+//                    board[row-frontDist][col] |= OBSTACLE;	//Flag as obstacle
+//                    board[row-frontDist][col] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row-frontDist, col);	//DEBUGGING
+//                }
+//                break;
+//            case RIGHT:
+//                if(col-frontDist >= 0) {
+//                    board[row][col-frontDist] |= OBSTACLE;	//Flag as obstacle
+//                    board[row][col-frontDist] &= ~UNDEFINED;	//Turn off undefined bit
+//                    if (debug) printf("    Obstacle: %d, %d", row, col-frontDist);	//DEBUGGING
+//                }
+//                break;
+//        }
+//
+//    }
+
+    printf("\n");
+    printBoard(board);
+}
+
+void runRound() {
+    char board[7][7];   //TODO: Explore the possibility of making this global
+    int i, j, margin;
+
+    //TODO: Initialize board
+    for (i = 0; i < 7; i++) {
+        for (j = 0; j < 7; j++) {
+            board[i][j] = EMPTY;
+        }
+    }
+    x = y = 0;      //These 3 variables are set here and then never touched by
+    r = FORWARD;    //this function. Only updateLocation() edits them
+                    //updateLocation is called by individual movement functions,
+                    //so when program is in non-blocking mode, they are updated
+                    //prematurely, before the robot is done moving. As long as
+                    //observe() is called after each movement, this isn't an issue
+
+    fp path[100];
+
+//	//DEBUGGING
+//            if (shortestPath(board, path, y, x, r, 6, 0, FORWARD) != NULL) {
+//                travelPath(board, path, y, x, r);
+//            }
+//	return;
+
+    printf("Begin spiral\n");
+    //Begin spiral inwards
+    for (margin = 0; margin < 3; margin++) {
+        //Travel first along left column, up to 5th square
+            if (shortestPath(board, path, y, x, r, 6-margin, margin, FORWARD) != NULL) {
+                travelPath(board, path, y, x, r);
+            }
+
+        //Travel along top row
+            if (shortestPath(board, path, y, x, r, 6-margin, 6-margin, RIGHT) != NULL) {
+                travelPath(board, path, y, x, r);
+            }
+
+        //Travel along left column
+            if (shortestPath(board, path, y, x, r, margin, 6-margin, BACKWARD) != NULL) {
+                travelPath(board, path, y, x, r);
+            }
+
+        //Travel along bottom row to 2nd square
+            if (shortestPath(board, path, y, x, r, margin, 1+margin, LEFT) != NULL) {
+                travelPath(board, path, y, x, r);
+            }
+    }
+
+    //Go to center square
+    if(shortestPath(board, path, y, x, r, 3, 3, FORWARD) != NULL) {
+        travelPath(board, path, y, x, r);
+    }
+
+//    int endRow;
+//    int endCol;
+//    int endOrient;
+//    for(i = 1; i < 6; i++) {
+//        if(board[i][0] & MAIN_TUNNEL) {		//Check left edge
+//            endRow = 0;
+//            endCol = i-1;
+//            endOrient = FORWARD;
+//            break;
+//        } else if (board[6][i] & MAIN_TUNNEL) {	//Check top edge
+//            endRow = 6;
+//            endCol = i-1;
+//            endOrient = LEFT;
+//            break;
+//        } else if (board[i][6] & MAIN_TUNNEL) {	//Check right edge
+//            endRow = i+1;
+//            endCol = 6;
+//            endOrient = BACKWARD;
+//            break;
+//        } else if (board[0][i] & MAIN_TUNNEL) {	//Check bottom edge
+//            endRow = 0;
+//            endCol = i+1;
+//            endOrient = RIGHT;
+//            break;
+//        }	
+//    }
+//
+//    if(shortestPath(board, path, y, x, r, endRow, endCol, endOrient) != NULL) {
+//        travelPath(board, path, y, x, r);
+//    }
+//
+//    readDieSequence();
+
+    //Return to starting square
+    if(shortestPath(board, path, y, x, r, 0, 0, FORWARD) != NULL) {
+        travelPath(board, path, y, x, r);
+    }
+}
+
+//DEBUGGING---------------------------------------------------------------------
+
+void testDrive() {
+    int i, j;
+    initAMG();
+    printf("Orientation: %f\n", getOrientation() / FXDPT);
+    fp movements[64];
+    for (i = 0; i < 16; i++) {
+        rotRight(0);
+        usleep(100000);
+    }
+    movements[10] = endPath;
+    //    for(j = 0; i < 4; j++) {
+    //        for(i = 0; i < 8; i+=2) {
+    //            printf("j=%d, i=%d\n",j,i);
+    //            movements[j*16+i] = forward;
+    //            movements[j*16+i+1] = rotRight;
+    //        } 
+    //        for(i = 8; i < 16; i+=2) {
+    //            printf("j=%d, i=%d\n",j,i);
+    //            movements[j*16+i] = forward;
+    //            movements[j*16+i+1] = rotLeft;
+    //        }
+    //        printf("j=%d\n",j);
+    //    }
+    //   
+    //    i = j = 0;
+    //    do {
+    //        j=movements[i](j);
+    //        i++;
+    //    }
+    //    while(j);
+
+    //    for(i = 0; i < 8; i++) {
+    //          for(j = 0; j < 32; j++) {
+    //                forward(0);
+    //                rotRightSingleWheel(0);
+    //          }
+    //          for(j = 0; j < 4; j++) {
+    //              rotate(90,9,CCW);
+    //          }
+    //          for(j = 0; j < 2; j++) {
+    //              uturn();
+    //          }
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotRightSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotLeftSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotLeftSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotLeftSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotLeftSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotRightSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotRightSingleWheel(0);
+    ////        readDataCSV();
+    //        forward(0);
+    ////        readDataCSV();
+    //        rotRightSingleWheel(0);
+    //    }
+}
+
+void testShortestPath() {
+    char board[7][7];
+    int r = 6;
+    int c = 0;
+
+    board[0][0] = EMPTY;
+    board[0][1] = EMPTY;
+    board[0][2] = EMPTY;
+    board[0][3] = EMPTY;
+    board[0][4] = EMPTY;
+    board[0][5] = EMPTY;
+    board[0][6] = UNDEFINED;
+    board[1][0] = EMPTY;
+    board[1][1] = EMPTY;
+    board[1][2] = EMPTY;
+    board[1][3] = EMPTY;
+    board[1][4] = OBSTACLE;
+    board[1][5] = EMPTY;
+    board[1][6] = UNDEFINED;
+    board[2][0] = EMPTY;
+    board[2][1] = EMPTY;
+    board[2][2] = EMPTY;
+    board[2][3] = OBSTACLE;
+    board[2][4] = EMPTY;
+    board[2][5] = EMPTY;
+    board[2][6] = UNDEFINED;
+    board[3][0] = EMPTY;
+    board[3][1] = OBSTACLE;
+    board[3][2] = EMPTY;
+    board[3][3] = EMPTY;
+    board[3][4] = EMPTY;
+    board[3][5] = EMPTY;
+    board[3][6] = UNDEFINED;
+    board[4][0] = EMPTY;
+    board[4][1] = OBSTACLE;
+    board[4][2] = EMPTY;
+    board[4][3] = UNDEFINED;
+    board[4][4] = UNDEFINED;
+    board[4][5] = UNDEFINED;
+    board[4][6] = UNDEFINED;
+    board[5][0] = EMPTY;
+    board[5][1] = OBSTACLE;
+    board[5][2] = EMPTY;
+    board[5][3] = UNDEFINED;
+    board[5][4] = UNDEFINED;
+    board[5][5] = UNDEFINED;
+    board[5][6] = UNDEFINED;
+    board[6][0] = EMPTY;
+    board[6][1] = EMPTY;
+    board[6][2] = EMPTY;
+    board[6][3] = UNDEFINED;
+    board[6][4] = UNDEFINED;
+    board[6][5] = UNDEFINED;
+    board[6][6] = UNDEFINED;
+
+    unsigned char startRow = 3;
+    unsigned char startCol = 0;
+    unsigned char startDir = FORWARD;
+    unsigned char endRow = 2;
+    unsigned char endCol = 4;
+    unsigned char endDir = BACKWARD;
+
+    if (debug) {
+        printf("+---------------+\n");
+        for (r = 6; r >= 0; r--) {
+            printf("|");
+            for (c = 0; c < 7; c++) {
+                if (r == startRow && c == startCol) printf(" S"); //Starting square
+                else if (r == endRow && c == endCol) printf(" E"); //Ending square
+                else if (board[r][c] & 0x80) printf(" ?"); //Undefined
+                else if (board[r][c] & 0x04) printf(" x"); //Obstacle
+                else if (board[r][c] & 0x02) printf(" O"); //Tunnel
+                else printf("  "); //Empty
+            }
+            printf(" |\n");
+        }
+        printf("+---------------+\n");
+    }
+
+    if (debug) printf("start (%hhx,%hhx,%s)\n", startRow, startCol, getDirection(startDir));
+    fp fnList[64];
+    shortestPath(board, fnList, startRow, startCol, startDir, endRow, endCol, endDir);
+    int i = 0;
+    while (fnList[i]()) i++;
+    if (debug) printf("final (%hhx,%hhx,%s)\n", endRow, endCol, getDirection(endDir));
+}
+
+void testRobot(void) {
+    int i;
+
+    if (debug) printf("Entering testRobot()\n");
+
+//    for(i = 0; i < 10000; i++) {
+//        printf("%d\n", getOrientation());
+//        delay_ms(500);
+//    }
+    //runRound();    
+    testIO();
+//   while(1) {
+//        if(pollStudFinder()) printf("Stud finder ON\n");
+//        else printf("Stud finder OFF\n");
+//        printf("IR: %f\n\n", getDist(LEFTIR));
+//        delay_ms(500);
+//   } 
+
+//    forward6(0);
+//    printf("I'm not blocking, I swear\n");
+//    for(i = 0; i < 3; i++) {
+//	    shared_memory->setpointPID.sp = -10;
+//            delay_ms(999);
+//	    shared_memory->setpointPID.sp = 10;
+//            delay_ms(999);
+//    }
+//
+//    waitForComplete();
+ 
+//      dieReadingSequence();   
+
+//    for(i = 0; i < 16; i++) {
+//        rotRight(0);
+//    }
+//    delay_ms(999);
+//    for(i = 0; i < 16; i++) {
+//        rotLeft(0);
+//    }
+
+//    int diecount = dieCount();
+//    printf("Count: %d\n", diecount);
+
+    if (debug) printf("Leaving testRobot()\n");
+    return;
+}

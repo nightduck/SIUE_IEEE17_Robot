@@ -28,6 +28,16 @@ $PRU_CGT_DIR/bin/clpru \
 -c \
 $PRU/pru0Lib.c
 
+echo "==> Compiling neopixel ..."
+$PRU_CGT_DIR/bin/clpru \
+--silicon_version=2 \
+--hardware_mac=on \
+-i$PRU_CGT_DIR/include \
+-i$INC/include \
+-i$PRU_CGT_DIR/lib \
+-c \
+$PRU/neopixel.c
+
 echo "==> Compiling motorLib ..."
 $PRU_CGT_DIR/bin/clpru \
 --silicon_version=2 \
@@ -62,6 +72,7 @@ $PRU_CGT_DIR/bin/clpru \
 -z \
 pru0Lib.obj \
 motorLib.obj \
+neopixel.obj \
 pru0.obj \
 -llibc.a \
 -m pru0.map \

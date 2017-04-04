@@ -20,16 +20,10 @@
 
 #include "mem.h"
 #include "PRUlib.h"
-#include "gui.h"
-
 
 // Global variable that points to shared memory
 
 extern  shared_memory_t  *shared_memory ;
-
-// Global variable that points to GUI variables
-
-extern  GUIvars_t   GUIvars ;
 
 // Debug variable
 

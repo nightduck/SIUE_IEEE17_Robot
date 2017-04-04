@@ -1,0 +1,122 @@
+/* Device Tree Overlay for enabling the pins that are used in Chapter 13
+* This overlay is based on the BB-PRU-01 overlay
+* Written by Derek Molloy for the book "Exploring BeagleBone: Tools and 
+* Techniques for Building with Embedded Linux" by John Wiley & Sons, 2014
+* ISBN 9781118935125. Please see the file README.md in the repository root 
+* directory for copyright and GNU GPLv3 license information.
+*
+* Modified for the Multi-Ears project
+* Gle: 9 Feb 2016
+* This is revision 2 on 18 March 2016.
+* Learned that beaglebone is to be bluetooth master rather than slave.
+*/
+/dts-v1/;
+/plugin/;
+
+/ {
+   compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+   part-number = "ears";
+   version = "00A0";
+
+   /* This overlay uses the following resources */
+   exclusive-use =
+            "P8.45",                // I2S_OUT_0
+            "P8.46",                // I2S_OUT_1
+            "P8.43",                // I2S_OUT_2
+            "P8.44",                // I2S_CLK_3
+            "P8.41",                // I2S_CLK
+            "P8.42",                // I2S_SYNC
+            "P8.39",                // UNUSED OUTPUT
+            "P8.40",                // UNUSED OUTPUT
+            "P8.27",                // I2S_IN_0
+            "P8.29",                // I2S_IN_1
+            "P8.28",                // I2S_IN_2
+            "P8.30",                // I2S_IN_3
+            "P8.12",                // UNUSED INPUT
+            "gpio1_12",             // 
+            "P8.11",                // UNUSED INPUT
+            "gpio1_13",             //
+            "P8.16",                // UNUSED INPUT
+            "gpio1_14",             // 
+            "P8.15",                // UNUSED INPUT
+            "gpio1_15",             // 
+            "P8.18",                // SW
+            "gpio2_1",              // 
+            "P8.14",                // LED 
+            "gpio0_26",             // 
+            "P8.17",                // TP
+            "gpio0_27",             // 
+            "pr1_pru1_pru_r30_0",   // r30.t0 (I2S_OUT_0)
+            "pr1_pru1_pru_r30_1",   // r30.t1 (I2S_OUT_1)
+            "pr1_pru1_pru_r30_2",   // r30.t2 (I2S_OUT_2)
+            "pr1_pru1_pru_r30_3",   // r30.t3 (I2S_OUT_3)
+            "pr1_pru1_pru_r30_4",   // r30.t4 (I2S_CLK)
+            "pr1_pru1_pru_r30_5",   // r30.t5 (I2S_SYNC)
+            "pr1_pru1_pru_r30_6",   // r30.t6 (UNUSED OUTPUT)
+            "pr1_pru1_pru_r30_7",   // r30.t7 (UNUSED OUTPUT)
+            "pr1_pru1_pru_r31_8",   // r31.t8 (I2S_IN_0)
+            "pr1_pru1_pru_r31_9",   // r31.t9 (I2S_IN_1)
+            "pr1_pru1_pru_r31_10",  // r31.t10 (I2S_IN_2)
+            "pr1_pru1_pru_r31_11",  // r31.t11 (I2S_IN_3)
+            "pru0",                 // Using PRU #0
+            "pru1";                 // and using PRU #1
+
+   fragment@0 {
+      target = <&am33xx_pinmux>;
+      __overlay__ {
+
+         gpio_pins: pinmux_gpio_pins {      // The GPIO pins
+            pinctrl-single,pins = <
+               0x030 0x27  // P8_12 MODE7 | INPUT   UNUSED INPUT
+               0x034 0x27  // P8_11 MODE7 | INPUT   UNUSED INPUT
+               0x038 0x27  // P8_16 MODE7 | INPUT   UNUSED INPUT
+               0x03c 0x27  // P8_15 MODE7 | INPUT   UNUSED INPUT
+               0x08c 0x27  // P8_18 MODE7 | INPUT   SW
+               0x028 0x17  // P8_14 MODE7 | OUTPUT  LED
+               0x02c 0x17  // P8_17 MODE7 | OUTPUT  TP  
+            >;
+         };
+
+         pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
+            pinctrl-single,pins = <
+               0x0a0 0x0d  // P8_45   I2S_OUT_0 (OUTPUT) => r30.t0
+               0x0a4 0x0d  // P8_46   I2S_OUT_1 (OUTPUT) => r30.t1
+               0x0a8 0x0d  // P8_43   I2S_OUT_2 (OUTPUT) => r30.t2
+               0x0ac 0x0d  // P8_44   I2S_OUT_3 (OUTPUT) => r30.t3
+               0x0b0 0x0d  // P8_41   I2S_CLK (OUTPUT) => r30.t4
+               0x0b4 0x0d  // P8_42   I2S_SYNC (OUTPUT) => r30.t5
+               0x0b8 0x0d  // P8_39   UNUSED OUTPUT => r30.t6
+               0x0bc 0x0d  // P8_40   UNUSED OUTPUT => r30.t7
+               0x0e0 0x26  // P8_27   I2S_IN_0 (INPUT) => r31.t8
+               0x0e4 0x26  // P8_29   I2S_IN_1 (INPUT) => r31.t9
+               0x0e8 0x26  // P8_28   I2S_IN_2 (INPUT) => r31.t10
+               0x0ec 0x26  // P8_30   I2S_IN_3 (INPUT) => r31.t11
+            >;
+         };
+      };
+   };
+
+   fragment@1 {         // Enable the PRUSS
+      target = <&pruss>;
+      __overlay__ {
+         status = "okay";
+         pinctrl-names = "default";
+         pinctrl-0 = <&pru_pru_pins>;
+      };
+   };
+
+   fragment@2 {         // Enable the GPIOs
+      target = <&ocp>;
+      __overlay__ {
+         gpio_helper {
+            compatible = "bone-pinmux-helper";
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&gpio_pins>;
+         };
+      };
+   };
+};
+
+

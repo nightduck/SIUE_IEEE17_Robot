@@ -1,0 +1,81 @@
+/* Device Tree Overlay for enabling the pins that are used in Chapter 13
+* This overlay is based on the BB-PRU-01 overlay
+* Written by Derek Molloy for the book "Exploring BeagleBone: Tools and 
+* Techniques for Building with Embedded Linux" by John Wiley & Sons, 2014
+* ISBN 9781118935125. Please see the file README.md in the repository root 
+* directory for copyright and GNU GPLv3 license information.
+*/
+//
+
+
+/dts-v1/;
+/plugin/;
+
+/ {
+   compatible = "ti,beaglebone", "ti,beaglebone-black";
+
+   part-number = "ROBOT";
+   version = "00A0";
+
+   /* This overlay uses the following resources */
+   exclusive-use =
+         "P8.7", "P8.8", "P8.9", "P8.10", "P8.13", "P8.14". "P8.17", "P8.18" ;
+
+   fragment@0 {
+      target = <&am33xx_pinmux>;
+      __overlay__ {
+
+         gpio_pins: pinmux_gpio_pins {         // The GPIO pins
+            pinctrl-single,pins = <
+                 0x090 0x07  // P8_7  MODE7 | OUTPUT | GPIO pull-down => LED7SEG_A (LSbit)
+                 0x094 0x07  // P8_8  MODE7 | OUTPUT | GPIO pull-down => LED7SEG_B
+                 0x09c 0x07  // P8_9  MODE7 | OUTPUT | GPIO pull-down => LED7SEG_C
+                 0x098 0x07  // P8_10  MODE7 | OUTPUT | GPIO pull-down => LED7SEG_D (MSbit)
+
+                 0x024 0x07  // P8_13  MODE7 | OUTPUT | GPIO pull-down => PUMP_ON
+                 0x028 0x07  // P8_14  MODE7 | OUTPUT | GPIO pull-down => NEO_CLK
+
+                 0x02c 0x37  // P9_17 MODE7 | INPUT | GPIO pullup => GO button
+                 0x08c 0x37  // P9_18  MODE7 | INPUT | GPIO pullup => STOP button
+
+//               0x070 0x07  // P9_11 MODE7 | OUTPUT | GPIO pull-down
+//               0x074 0x27  // P9_13 MODE7 | INPUT | GPIO pull-down
+            >;
+         };
+
+         pru_pru_pins: pinmux_pru_pru_pins {   // The PRU pin modes
+            pinctrl-single,pins = <
+//               0x1ac 0x05  // P9_25 pr1_pru0_pru_r30_7, MODE5 | OUTPUT | PRU_0
+//               0x1a4 0x05  // P9_27 pr1_pru0_pru_r30_5, MODE5 | OUTPUT | PRU_0
+//               0x19c 0x26  // P9_28 pr1_pru0_pru_r31_3, MODE6 | INPUT | PRU_0
+//               0x0a4 0x26  // P8_46 pr1_pru1_pru_r31_1, MODE6 | INPUT | PRU_1
+//               0x0a8 0x26  // P8_43 pr1_pru1_pru_r31_2, MODE6 | INPUT | PRU_1
+//               0x0ac 0x26  // P8_44 pr1_pru1_pru_r31_3, MODE6 | INPUT | PRU_1
+//               0x0b0 0x26  // P8_41 pr1_pru1_pru_r31_4, MODE6 | INPUT | PRU_1
+//               0x0a0 0x05  // P8_45 pr1_pru0_pru_r30_0, MODE5 | OUTPUT | PRU_1
+            >;
+         };
+      };
+   };
+
+   fragment@1 {         // Enable the PRUSS
+      target = <&pruss>;
+      __overlay__ {
+         status = "okay";
+         pinctrl-names = "default";
+         pinctrl-0 = <&pru_pru_pins>;
+      };
+   };
+
+   fragment@2 {         // Enable the GPIOs
+      target = <&ocp>;
+      __overlay__ {
+         gpio_helper {
+            compatible = "gpio-of-helper";
+            status = "okay";
+            pinctrl-names = "default";
+            pinctrl-0 = <&gpio_pins>;
+         };
+      };
+   };
+};

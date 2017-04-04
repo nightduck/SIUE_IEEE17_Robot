@@ -1,0 +1,7 @@
+// Added by gle on 25 Nov 2016 to support Neo-pixel array
+
+#define   NEO_PIXEL_MODE    1
+
+void      wait(int delay) ;
+void      NeoPixelDisplay(void) ;
+

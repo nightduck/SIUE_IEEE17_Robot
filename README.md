@@ -8,7 +8,8 @@ This is a readme for the PRU-MotorLib. Hopefully at some point there will be som
 
 ### How do I get set up? ###
 
-* Clone it you silly
+* Clone it you sillyI
+* Be sure to type build after making edits
 
 ### Contribution guidelines ###
 

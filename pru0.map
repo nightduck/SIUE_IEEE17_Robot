@@ -1,10 +1,10 @@
 ******************************************************************************
                      PRU Linker Unix v2.0.0                    
 ******************************************************************************
->> Linked Sun Mar  1 20:58:17 2015
+>> Linked Thu May 15 02:24:37 2014
 
 OUTPUT FILE NAME:   <pru0.elf>
-ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 000008cc
+ENTRY POINT SYMBOL: "_c_int00_noinit_noargs_noexit"  address: 0000109c
 
 
 MEMORY CONFIGURATION
@@ -12,10 +12,10 @@ MEMORY CONFIGURATION
          name            origin    length      used     unused   attr    fill
 ----------------------  --------  ---------  --------  --------  ----  --------
 PAGE 0:
-  PRU_IMEM              00000000   00002000  000008f4  0000170c  RWIX
+  PRU_IMEM              00000000   00002000  000010e8  00000f18  RWIX
 
 PAGE 1:
-  PRU_DMEM_0_1          00000000   00002000  00000118  00001ee8  RWIX
+  PRU_DMEM_0_1          00000000   00002000  00000234  00001dcc  RWIX
   PRU_DMEM_1_0          00002000   00002000  00000000  00002000  RWIX
   PRU_SHAREDMEM         00010000   00003000  00000000  00003000  RWIX
   PRU_INTC              00020000   00001504  00001504  00000000  RWIX
@@ -54,28 +54,38 @@ SECTION ALLOCATION MAP
  output                                  attributes/
 section   page    origin      length       input sections
 --------  ----  ----------  ----------   ----------------
-.text      0    00000000    000008f4     
-                  00000000    00000378     motorLib.obj (.text:move)
-                  00000378    000001e0     motorLib.obj (.text:PID)
-                  00000558    00000150     rtspruv2_le.lib : llmpy.obj (.text:__pruabi_mpyll)
-                  000006a8    000000b8     pru0.obj (.text:main)
-                  00000760    00000060     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lslll)
-                  000007c0    0000004c     motorLib.obj (.text:doCommand)
-                  0000080c    00000044     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lsrll)
-                  00000850    00000034     pru0Lib.obj (.text:initGPIO)
-                  00000884    00000024     rtspruv2_le.lib : mpyi.obj (.text:__pruabi_mpyi)
-                  000008a8    00000024     pru0.obj (.text:initPRU)
-                  000008cc    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
-                  000008e0    00000008                     : exit.obj (.text:abort)
-                  000008e8    00000008                     : exit.obj (.text:loader_exit)
-                  000008f0    00000004     motorLib.obj (.text:waitForInterrupt)
+.text      0    00000000    000010e8     
+                  00000000    00000304     motorLib.obj (.text:adjustSetpoint)
+                  00000304    000002f0     motorLib.obj (.text:move)
+                  000005f4    00000238     motorLib.obj (.text:PID)
+                  0000082c    000001b0     motorLib.obj (.text:createState)
+                  000009dc    00000150     rtspruv2_le.lib : llmpy.obj (.text:__pruabi_mpyll)
+                  00000b2c    00000138     motorLib.obj (.text:doCommand)
+                  00000c64    000000c4     pru0Lib.obj (.text:initGPIO)
+                  00000d28    00000098     pru0Lib.obj (.text:GPIO3pin)
+                  00000dc0    00000098     pru0.obj (.text:main)
+                  00000e58    00000078     neopixel.obj (.text:NeoPixelDisplay)
+                  00000ed0    00000060     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lslll)
+                  00000f30    0000004c     pru0.obj (.text:killTime)
+                  00000f7c    00000044     rtspruv2_le.lib : imath64.obj (.text:__pruabi_lsrll)
+                  00000fc0    00000028     motorLib.obj (.text:coast)
+                  00000fe8    00000028     motorLib.obj (.text:haltPRU)
+                  00001010    00000028     motorLib.obj (.text:hardBrake)
+                  00001038    00000024     rtspruv2_le.lib : mpyi.obj (.text:__pruabi_mpyi)
+                  0000105c    00000024     pru0.obj (.text:initPRU)
+                  00001080    0000001c     pru0.obj (.text:waitForInterrupt)
+                  0000109c    00000014     rtspruv2_le.lib : boot_special.obj (.text:_c_int00_noinit_noargs_noexit)
+                  000010b0    00000014     pru0Lib.obj (.text:disableBuffers)
+                  000010c4    00000014     pru0Lib.obj (.text:enableBuffers)
+                  000010d8    00000008     rtspruv2_le.lib : exit.obj (.text:abort)
+                  000010e0    00000008                     : exit.obj (.text:loader_exit)
 
-.stack     1    00000000    00000100     UNINITIALIZED
+.stack     1    00000000    00000200     UNINITIALIZED
                   00000000    00000004     rtspruv2_le.lib : boot.obj (.stack)
-                  00000004    000000fc     --HOLE--
+                  00000004    000001fc     --HOLE--
 
-.bss       1    00000100    00000018     UNINITIALIZED
-                  00000100    00000018     pru0.obj (.bss)
+.bss       1    00000200    00000034     UNINITIALIZED
+                  00000200    00000034     pru0.obj (.bss)
 
 .cinit     1    00000000    00000000     UNINITIALIZED
 
@@ -104,9 +114,11 @@ GLOBAL SYMBOLS: SORTED ALPHABETICALLY BY Name
 
 address    name
 --------   ----
-000008e8   C$$EXIT
+000010e0   C$$EXIT
 00020000   CT_INTC
-00000378   PID
+00000d28   GPIO3pin
+00000e58   NeoPixelDisplay
+000005f4   PID
 481cc000   __PRU_CREG_BASE_DCAN0
 481d0000   __PRU_CREG_BASE_DCAN1
 80000000   __PRU_CREG_BASE_DDR
@@ -171,34 +183,49 @@ address    name
 0000001d   __PRU_CREG_TPCC
 0000000b   __PRU_CREG_UART1
 0000000c   __PRU_CREG_UART2
-00000100   __TI_STACK_END
-00000100   __TI_STACK_SIZE
+00000200   __TI_STACK_END
+00000200   __TI_STACK_SIZE
 00000001   __TI_args_main
 00000001   __TI_auto_init
 00000001   __TI_c_int00
 00000001   __TI_exit
 ffffffff   __binit__
 ffffffff   __c_args__
-00000760   __pruabi_lslll
-0000080c   __pruabi_lsrll
-00000884   __pruabi_mpyi
-00000558   __pruabi_mpyll
-000008cc   _c_int00_noinit_noargs_noexit
+00000ed0   __pruabi_lslll
+00000f7c   __pruabi_lsrll
+00001038   __pruabi_mpyi
+000009dc   __pruabi_mpyll
+0000109c   _c_int00_noinit_noargs_noexit
 00000000   _stack
-000008e0   abort
+000010d8   abort
+00000000   adjustSetpoint
 ffffffff   binit
-00000104   clrGPIO1_reg
-00000114   clrGPIO3_reg
-000007c0   doCommand
-00000850   initGPIO
-000008a8   initPRU
-000006a8   main
-00000100   mem
-00000000   move
-0000010c   readGPIO1_reg
-00000108   setGPIO1_reg
-00000110   setGPIO3_reg
-000008f0   waitForInterrupt
+00000204   clrGPIO0_reg
+00000210   clrGPIO1_reg
+0000021c   clrGPIO2_reg
+00000228   clrGPIO3_reg
+00000fc0   coast
+0000082c   createState
+000010b0   disableBuffers
+00000b2c   doCommand
+000010c4   enableBuffers
+00000fe8   haltPRU
+00001010   hardBrake
+00000c64   initGPIO
+0000105c   initPRU
+00000f30   killTime
+00000dc0   main
+00000200   mem
+00000304   move
+0000020c   readGPIO0_reg
+00000218   readGPIO1_reg
+00000224   readGPIO2_reg
+00000230   readGPIO3_reg
+00000208   setGPIO0_reg
+00000214   setGPIO1_reg
+00000220   setGPIO2_reg
+0000022c   setGPIO3_reg
+00001080   waitForInterrupt
 
 
 GLOBAL SYMBOLS: SORTED BY Symbol Address 
@@ -208,7 +235,7 @@ address    name
 00000000   __PRU_CREG_BASE_PRU_DMEM_0_1
 00000000   __PRU_CREG_PRU_INTC
 00000000   _stack
-00000000   move
+00000000   adjustSetpoint
 00000001   __PRU_CREG_DMTIMER2
 00000001   __TI_args_main
 00000001   __TI_auto_init
@@ -244,27 +271,44 @@ address    name
 0000001d   __PRU_CREG_TPCC
 0000001e   __PRU_CREG_L3OCMC
 0000001f   __PRU_CREG_DDR
-00000100   __TI_STACK_END
-00000100   __TI_STACK_SIZE
-00000100   mem
-00000104   clrGPIO1_reg
-00000108   setGPIO1_reg
-0000010c   readGPIO1_reg
-00000110   setGPIO3_reg
-00000114   clrGPIO3_reg
-00000378   PID
-00000558   __pruabi_mpyll
-000006a8   main
-00000760   __pruabi_lslll
-000007c0   doCommand
-0000080c   __pruabi_lsrll
-00000850   initGPIO
-00000884   __pruabi_mpyi
-000008a8   initPRU
-000008cc   _c_int00_noinit_noargs_noexit
-000008e0   abort
-000008e8   C$$EXIT
-000008f0   waitForInterrupt
+00000200   __TI_STACK_END
+00000200   __TI_STACK_SIZE
+00000200   mem
+00000204   clrGPIO0_reg
+00000208   setGPIO0_reg
+0000020c   readGPIO0_reg
+00000210   clrGPIO1_reg
+00000214   setGPIO1_reg
+00000218   readGPIO1_reg
+0000021c   clrGPIO2_reg
+00000220   setGPIO2_reg
+00000224   readGPIO2_reg
+00000228   clrGPIO3_reg
+0000022c   setGPIO3_reg
+00000230   readGPIO3_reg
+00000304   move
+000005f4   PID
+0000082c   createState
+000009dc   __pruabi_mpyll
+00000b2c   doCommand
+00000c64   initGPIO
+00000d28   GPIO3pin
+00000dc0   main
+00000e58   NeoPixelDisplay
+00000ed0   __pruabi_lslll
+00000f30   killTime
+00000f7c   __pruabi_lsrll
+00000fc0   coast
+00000fe8   haltPRU
+00001010   hardBrake
+00001038   __pruabi_mpyi
+0000105c   initPRU
+00001080   waitForInterrupt
+0000109c   _c_int00_noinit_noargs_noexit
+000010b0   disableBuffers
+000010c4   enableBuffers
+000010d8   abort
+000010e0   C$$EXIT
 00002000   __PRU_CREG_BASE_PRU_DMEM_1_0
 00010000   __PRU_CREG_BASE_PRU_SHAREDMEM
 00020000   CT_INTC
@@ -301,4 +345,4 @@ ffffffff   __binit__
 ffffffff   __c_args__
 ffffffff   binit
 
-[95 symbols]
+[112 symbols]

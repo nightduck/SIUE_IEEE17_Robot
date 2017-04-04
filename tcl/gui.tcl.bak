@@ -215,8 +215,8 @@ frame .sliderarea -borderwidth $bw -relief ridge
 pack .sliderarea -fill x -expand true
 
 set Kp  40
-set Ki  40
-set Kd  40
+set Ki  0
+set Kd  0
 
 set slength 500
 
